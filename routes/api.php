@@ -5,6 +5,8 @@ use App\Http\Controllers\Users\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
+    Route::post('send-otp', [AuthController::class, 'sendPhoneOtp']);
+    Route::post('verify-otp', [AuthController::class, 'verifyPhoneOtp']);
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
 });
