@@ -29,6 +29,7 @@ class User extends Authenticatable
         'lga',
         'bnv',
         'phone_number',
+        'phone_verified_at',
         'password',
     ];
 

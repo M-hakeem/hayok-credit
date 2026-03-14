@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Users;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class UserController extends Controller
 {
@@ -96,7 +97,6 @@ class UserController extends Controller
             'user' => $user
         ]);
     }
-
     /**
      * Remove the specified resource from storage.
      */
