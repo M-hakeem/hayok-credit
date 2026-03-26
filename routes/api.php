@@ -7,13 +7,14 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->group(function () {
     Route::post('send-otp', [AuthController::class, 'sendPhoneOtp']);
     Route::post('verify-otp', [AuthController::class, 'verifyPhoneOtp']);
-    Route::post('register', [AuthController::class, 'register']);
+    Route::post('set-password', [AuthController::class, 'setPassword']);
     Route::post('login', [AuthController::class, 'login']);
 });
 
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::get('/', [UserController::class, 'index']);
     Route::get('{id}', [UserController::class, 'show']);
-    Route::put('{id}', [UserController::class, 'update']);
+    Route::put('update-profile', [UserController::class, 'update']);
+
     Route::delete('{id}', [UserController::class, 'destroy']);
 });

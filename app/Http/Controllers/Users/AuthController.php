@@ -141,30 +141,34 @@ class AuthController extends Controller
         ], 422);
     }
 
-    // 3️⃣ Register user (only after OTP verified)
-    public function register(RegisterUserRequest  $request)
+    public function setPassword(Request $request)
     {
+        $request->validate([
+            'phone_number' => 'required|string',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
 
-
-        // Make sure the column matches your PhoneVerification table
         $verification = PhoneVerification::where('phone_number', $request->phone_number)->first();
 
         if (!$verification || !$verification->verified) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Phone number must be verified before registration'
+                'message' => 'Phone number not verified'
             ], 422);
         }
 
+        // Check if user already exists
+        $user = User::where('phone_number', $request->phone_number)->first();
+
+        if ($user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User already exists, please login'
+            ], 422);
+        }
+
+        // Create user with ONLY phone + password
         $user = User::create([
-            'fullname' => $request->fullname,
-            'dob' => $request->dob,
-            'gender' => $request->gender,
-            'email' => $request->email,
-            'residential_address' => $request->residential_address,
-            'state' => $request->state,
-            'lga' => $request->lga,
-            'bnv' => $request->bnv,
             'phone_number' => $request->phone_number,
             'password' => bcrypt($request->password),
             'phone_verified_at' => now(),
@@ -172,39 +176,37 @@ class AuthController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'User registered successfully',
+            'message' => 'Password set successfully. You can now login.',
             'data' => $user
         ], 201);
     }
 
+    // 3️⃣ Register user (only after OTP verified)
+
     public function login(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'phone_number' => 'required|string',
             'password' => 'required|string',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('phone_number', $request->phone_number)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Invalid email or password'
+                'message' => 'Invalid phone number or password'
             ], 401);
         }
 
-        // Create token with expiration
-        $tokenResult = $user->createToken('auth_token');
-        $token = $tokenResult->plainTextToken;
-        $expiresAt = Carbon::now()->addHours(72)->toIso8601String();
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Login Successful',
+            'message' => 'Login successful',
             'data' => [
                 'token' => $token,
-                'expired_at' => $expiresAt,
-                'staff' => $user
+                'user' => $user
             ]
         ]);
     }
