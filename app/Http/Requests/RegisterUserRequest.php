@@ -22,16 +22,14 @@ class RegisterUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'fullname' => 'required|string|max:255',
-            'dob' => 'required|date',
-            'gender' => 'required|string|max:10',
-            'email' => 'required|email|unique:users,email',
-            'residential_address' => 'required|string',
-            'state' => 'required|string|max:100',
-            'lga' => 'required|string|max:100',
-            'bnv' => 'required|string|max:20',
-            'phone_number' => 'required|string|max:15',
-            'password' => 'required|string|min:6',
+            'fullname' => 'nullable|string|max:255',
+            'dob' => 'nullable|date',
+            'gender' => 'nullable|string|max:10',
+            'email' => 'nullable|email|unique:users,email',
+            'residential_address' => 'nullable|string',
+            'state' => 'nullable|string|max:100',
+            'lga' => 'nullable|string|max:100',
+            'bnv' => 'nullable|string|max:20',
         ];
     }
 }
