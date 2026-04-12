@@ -55,4 +55,28 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * Get all addresses for the user.
+     */
+    public function addresses()
+    {
+        return $this->hasMany(Address::class);
+    }
+
+    /**
+     * Get all employments for the user.
+     */
+    public function employments()
+    {
+        return $this->hasMany(Employment::class);
+    }
+
+    /**
+     * Get all guarantors for the user.
+     */
+    public function guarantors()
+    {
+        return $this->hasMany(Guarantor::class);
+    }
 }
