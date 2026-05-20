@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->string('email')->nullable();
             $table->string('phone')->nullable();
-            $table->string('api_key', 64)->unique();  // SHA-256 hash of the real key
+            $table->string('api_key', 64)->nullable()->unique();
             $table->enum('status', ['active', 'inactive', 'suspended'])->default('active');
             $table->text('notes')->nullable();
             $table->timestamps();

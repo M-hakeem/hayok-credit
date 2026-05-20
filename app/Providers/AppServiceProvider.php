@@ -65,12 +65,25 @@ class AppServiceProvider extends ServiceProvider
                     ->as('bearerAuth')
                     ->setDescription('Use the Bearer token from /api/auth/login')
             );
+
+            $openApi->components->addSecurityScheme(
+                'partnerKey',
+                SecurityScheme::apiKey('header', 'X-Partner-Key')
+                    ->as('partnerKey')
+                    ->setDescription('Partner API key — set PARTNER_API_KEY in .env')
+            );
         });
 
         Scramble::configure()->withOperationTransformers(function (OperationTransformers $transformers) {
             $transformers->append(function (Operation $operation, RouteInfo $routeInfo) {
-                if (collect($routeInfo->route->gatherMiddleware())->contains(fn ($middleware) => is_string($middleware) && (str_starts_with($middleware, 'auth:') || $middleware === 'auth'))) {
+                $middleware = collect($routeInfo->route->gatherMiddleware());
+
+                if ($middleware->contains(fn ($m) => is_string($m) && (str_starts_with($m, 'auth:') || $m === 'auth'))) {
                     $operation->addSecurity(new SecurityRequirement(['bearerAuth' => []]));
+                }
+
+                if ($middleware->contains('partner')) {
+                    $operation->addSecurity(new SecurityRequirement(['partnerKey' => []]));
                 }
             });
         });
