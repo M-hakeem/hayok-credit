@@ -29,7 +29,7 @@ class RegisterUserRequest extends FormRequest
             'residential_address' => 'nullable|string',
             'state' => 'nullable|string|max:100',
             'lga' => 'nullable|string|max:100',
-            'bnv' => 'nullable|string|max:20',
+            'bvn' => 'nullable|string|max:20',
         ];
     }
 }

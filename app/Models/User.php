@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Casts\Encrypted;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -20,6 +21,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+        'organisation_id',
         'fullname',
         'dob',
         'gender',
@@ -27,10 +29,21 @@ class User extends Authenticatable
         'residential_address',
         'state',
         'lga',
-        'bnv',
+        'nin',
+        'bvn',
         'phone_number',
         'phone_verified_at',
         'password',
+        'bank_name',
+        'bank_account_number',
+        'bank_account_name',
+        'bank_code',
+        'bank_connected_at',
+        'status',
+        'kyc_status',
+        'account_level',
+        'is_blacklisted',
+        'role',
     ];
 
     /**
@@ -52,8 +65,49 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
+            'bank_connected_at' => 'datetime',
+            'is_blacklisted' => 'boolean',
             'password' => 'hashed',
+            'nin' => Encrypted::class,
+            'bvn' => Encrypted::class,
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::created(function (self $user): void {
+            $user->wallet()->create([
+                'balance' => 0,
+                'currency' => 'NGN',
+            ]);
+        });
+    }
+
+    public function organisation()
+    {
+        return $this->belongsTo(Organisation::class);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Get the wallet for the user.
+     */
+    public function wallet()
+    {
+        return $this->hasOne(Wallet::class);
+    }
+
+    /**
+     * Get all withdrawal requests for the user.
+     */
+    public function withdrawals()
+    {
+        return $this->hasMany(Withdrawal::class);
     }
 
     /**
@@ -78,5 +132,13 @@ class User extends Authenticatable
     public function guarantors()
     {
         return $this->hasMany(Guarantor::class);
+    }
+
+    /**
+     * Get all loans for the user.
+     */
+    public function loans()
+    {
+        return $this->hasMany(Loan::class);
     }
 }

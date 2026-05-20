@@ -19,7 +19,8 @@ return new class extends Migration
             $table->text('residential_address')->nullable()->change();
             $table->string('state')->nullable()->change();
             $table->string('lga')->nullable()->change();
-            $table->string('bnv')->nullable()->change();
+            $table->string('nin')->nullable()->change();
+            $table->string('bvn')->nullable()->change();
         });
     }
 

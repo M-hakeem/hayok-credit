@@ -39,10 +39,19 @@ class AuthController extends Controller
         ]);
 
         // Check if phone is already registered
-        if (User::where('phone_number', $request->phone)->exists()) {
+        $existingUser = User::where('phone_number', $request->phone)->first();
+        if ($existingUser) {
+            // Partner-created user — already verified, just needs a password
+            if ($existingUser->phone_verified_at && ! $existingUser->password) {
+                return response()->json([
+                    'status'  => 'partner_verified',
+                    'message' => 'Your number is already verified. Please proceed to set your password.',
+                ], 200);
+            }
+
             return response()->json([
-                'status' => 'error',
-                'message' => 'Phone number already registered'
+                'status'  => 'error',
+                'message' => 'Phone number already registered. Please login.',
             ], 422);
         }
 
@@ -148,36 +157,53 @@ class AuthController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
 
+        $existingUser = User::where('phone_number', $request->phone_number)->first();
+
+        // Partner-created user — phone already verified, just set the password
+        if ($existingUser && $existingUser->phone_verified_at) {
+            if ($existingUser->password) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Password already set. Please login.',
+                ], 422);
+            }
+
+            $existingUser->update(['password' => $request->password]);
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Password set successfully. You can now login.',
+                'data'    => $existingUser,
+            ], 200);
+        }
+
+        // Normal OTP flow
         $verification = PhoneVerification::where('phone_number', $request->phone_number)->first();
 
-        if (!$verification || !$verification->verified) {
+        if (! $verification || ! $verification->verified) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Phone number not verified'
+                'status'  => 'error',
+                'message' => 'Phone number not verified.',
             ], 422);
         }
 
-        // Check if user already exists
-        $user = User::where('phone_number', $request->phone_number)->first();
-
-        if ($user) {
+        if ($existingUser) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'User already exists, please login'
+                'status'  => 'error',
+                'message' => 'User already exists. Please login.',
             ], 422);
         }
 
-        // Create user with ONLY phone + password
         $user = User::create([
-            'phone_number' => $request->phone_number,
-            'password' => bcrypt($request->password),
+            'phone_number'      => $request->phone_number,
+            'password'          => $request->password,
             'phone_verified_at' => now(),
         ]);
 
         return response()->json([
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'Password set successfully. You can now login.',
-            'data' => $user
+            'data'    => $user,
         ], 201);
     }
 
@@ -197,6 +223,13 @@ class AuthController extends Controller
                 'status' => 'error',
                 'message' => 'Invalid phone number or password'
             ], 401);
+        }
+
+        if ($user->is_blacklisted) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Your account has been suspended. Please contact support.'
+            ], 403);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;

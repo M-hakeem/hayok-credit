@@ -20,9 +20,11 @@ return new class extends Migration
             $table->text('residential_address');
             $table->string('state');
             $table->string('lga');
-            $table->string('bnv');
+            $table->string('nin')->nullable();
+            $table->string('bvn')->nullable();
             $table->string('phone_number');
             $table->string('password');
+            $table->string('role')->default('user');
             $table->timestamps();
             $table->softDeletes();
         });
