@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Users;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 
 class UserController extends Controller
 {
@@ -17,10 +16,9 @@ class UserController extends Controller
         $users = User::all();
 
         return response()->json([
-            'success' => true,
-            'message' => 'User created successfully',
+            'status' => 'success',
             'data' => $users,
-        ], 201);
+        ], 200);
     }
 
     /**
@@ -90,7 +88,7 @@ class UserController extends Controller
             'residential_address',
             'state',
             'lga',
-            'bnv'
+            'bvn',
         ]);
 
         $user->update($data);

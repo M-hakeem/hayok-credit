@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'partner' => [
+        'api_key' => env('PARTNER_API_KEY'),
+    ],
+
 ];
