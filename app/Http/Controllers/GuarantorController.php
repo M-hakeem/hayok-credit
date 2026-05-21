@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreGuarantorRequest;
+use App\Http\Requests\UpdateGuarantorIdDocumentRequest;
 use App\Models\Guarantor;
+use Dedoc\Scramble\Attributes\BodyParameter;
+use Illuminate\Support\Facades\Storage;
 
 class GuarantorController extends Controller
 {
@@ -51,13 +54,21 @@ class GuarantorController extends Controller
                 ], 422);
             }
 
-            // Create the guarantor record
+            $idFilePath = null;
+            if ($request->hasFile('id_file')) {
+                $file = $request->file('id_file');
+                $filename = time() . '_' . $user->id . '.' . $file->getClientOriginalExtension();
+                $idFilePath = $file->storeAs('guarantor_ids', $filename, 'public');
+            }
+
             $guarantor = Guarantor::create([
                 'user_id' => $user->id,
                 'guarantor_type' => $request->guarantor_type,
                 'relationship' => $request->relationship,
                 'name' => $request->name,
                 'phone_number' => $request->phone_number,
+                'id_type' => $request->id_type,
+                'id_file_path' => $idFilePath,
             ]);
 
             return response()->json([
@@ -121,12 +132,24 @@ class GuarantorController extends Controller
                 }
             }
 
-            $guarantor->update([
+            $updateData = [
                 'guarantor_type' => $request->guarantor_type,
                 'relationship' => $request->relationship,
                 'name' => $request->name,
                 'phone_number' => $request->phone_number,
-            ]);
+                'id_type' => $request->id_type,
+            ];
+
+            if ($request->hasFile('id_file')) {
+                if ($guarantor->id_file_path && Storage::disk('public')->exists($guarantor->id_file_path)) {
+                    Storage::disk('public')->delete($guarantor->id_file_path);
+                }
+                $file = $request->file('id_file');
+                $filename = time() . '_' . $user->id . '.' . $file->getClientOriginalExtension();
+                $updateData['id_file_path'] = $file->storeAs('guarantor_ids', $filename, 'public');
+            }
+
+            $guarantor->update($updateData);
 
             return response()->json([
                 'status' => 'success',
@@ -139,6 +162,45 @@ class GuarantorController extends Controller
                 'status' => 'error',
                 'message' => 'Failed to update guarantor',
                 'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * @requestMediaType multipart/form-data
+     */
+    #[BodyParameter('id_type', type: 'string', required: true, description: 'NIN, BVN, Drivers License, International Passport, or Voters Card')]
+    #[BodyParameter('id_file', type: 'string', format: 'binary', required: true, description: 'ID document file (PDF, JPG, JPEG, PNG — max 5MB)')]
+    public function uploadIdDocument(UpdateGuarantorIdDocumentRequest $request, string $id)
+    {
+        try {
+            $user      = auth()->user();
+            $guarantor = Guarantor::where('user_id', $user->id)->findOrFail($id);
+
+            if ($guarantor->id_file_path && Storage::disk('public')->exists($guarantor->id_file_path)) {
+                Storage::disk('public')->delete($guarantor->id_file_path);
+            }
+
+            $file     = $request->file('id_file');
+            $filename = time() . '_' . $user->id . '.' . $file->getClientOriginalExtension();
+            $path     = $file->storeAs('guarantor_ids', $filename, 'public');
+
+            $guarantor->update([
+                'id_type'      => $request->id_type,
+                'id_file_path' => $path,
+            ]);
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'ID document uploaded successfully.',
+                'data'    => $guarantor,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Failed to upload ID document.',
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
