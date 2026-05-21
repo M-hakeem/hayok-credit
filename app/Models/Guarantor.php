@@ -15,6 +15,8 @@ class Guarantor extends Model
         'relationship',
         'name',
         'phone_number',
+        'id_type',
+        'id_file_path',
     ];
 
     protected $casts = [

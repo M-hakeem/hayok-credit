@@ -26,6 +26,8 @@ class StoreGuarantorRequest extends FormRequest
             'relationship' => 'required|string|min:3|max:50',
             'name' => 'required|string|min:3|max:100',
             'phone_number' => 'required|string',
+            'id_type' => 'required|in:NIN,BVN,Drivers License,International Passport,Voters Card',
+            'id_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ];
     }
 
@@ -41,7 +43,12 @@ class StoreGuarantorRequest extends FormRequest
             'relationship.min' => 'Relationship must be at least 3 characters',
             'name.required' => 'Guarantor name is required',
             'name.min' => 'Guarantor name must be at least 3 characters',
-            'phone_number.required' => 'Guarantor phone number is required'
+            'phone_number.required' => 'Guarantor phone number is required',
+            'id_type.required' => 'Means of identification is required',
+            'id_type.in' => 'ID type must be NIN, BVN, Drivers License, International Passport, or Voters Card',
+            'id_file.required' => 'ID document file is required',
+            'id_file.mimes' => 'ID document must be a PDF, JPG, JPEG, or PNG file',
+            'id_file.max' => 'ID document must not exceed 5MB',
         ];
     }
 }

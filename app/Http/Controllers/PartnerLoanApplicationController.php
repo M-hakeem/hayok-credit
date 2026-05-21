@@ -2,74 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PartnerLoanApplicationRequest;
 use App\Models\Loan;
 use App\Models\LoanInterestSetting;
 use App\Models\Organisation;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 class PartnerLoanApplicationController extends Controller
 {
-    public function store(Request $request)
+    public function store(PartnerLoanApplicationRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            // Organisation
-            'organisation_name'    => 'required|string|max:255',
-
-            // User identity
-            'fullname'             => 'required|string|max:255',
-            'phone_number'         => 'required|string|unique:users,phone_number',
-            'email'                => 'nullable|email|unique:users,email',
-            'dob'                  => 'required|date',
-            'gender'               => 'required|in:male,female',
-            'nin'                  => 'required|string|max:11',
-            'bvn'                  => 'required|string|max:11',
-
-            // Address
-            'residential_address'  => 'required|string|min:10',
-            'state'                => 'required|string|max:100',
-            'lga'                  => 'required|string|max:100',
-
-            // Bank
-            'bank_name'            => 'required|string|max:255',
-            'bank_account_number'  => 'required|string|max:64',
-            'bank_account_name'    => 'required|string|max:255',
-            'bank_code'            => 'nullable|string|max:32',
-
-            // Loan
-            'amount_requested'     => 'required|numeric|min:100|max:9999999.99',
-            'term_months'          => 'required|integer|min:1|max:60',
-            'application_reason'   => 'nullable|string|max:1000',
-
-            // Guarantors — at least one required
-            'guarantors'                       => 'required|array|min:1|max:3',
-            'guarantors.*.guarantor_type'      => 'required|in:1st,2nd,3rd',
-            'guarantors.*.name'                => 'required|string|max:255',
-            'guarantors.*.phone_number'        => 'required|string|max:20',
-            'guarantors.*.relationship'        => 'required|string|max:100',
-
-            // Employment — optional
-            'employment'                           => 'nullable|array',
-            'employment.employment_information'    => 'required_with:employment|string|min:5',
-            'employment.occupation'                => 'required_with:employment|string|min:3',
-            'employment.educational_details'       => 'nullable|string|min:5',
-            'employment.income'                    => 'required_with:employment|numeric|min:0',
-        ], [
-            'phone_number.unique'      => 'This phone number already has an account.',
-            'guarantors.min'           => 'At least one guarantor is required.',
-            'guarantors.*.guarantor_type.in' => 'Guarantor type must be 1st, 2nd, or 3rd.',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Validation failed.',
-                'errors'  => $validator->errors(),
-            ], 422);
-        }
+        $existingUser = User::where('phone_number', $request->phone_number)
+            ->when($request->filled('email'), fn($q) => $q->orWhere('email', $request->email))
+            ->first();
+        $isNewUser = $existingUser === null;
 
         $name         = trim($request->organisation_name);
         $organisation = Organisation::firstOrCreate(
@@ -88,64 +36,127 @@ class PartnerLoanApplicationController extends Controller
         }
 
         try {
-            $result = DB::transaction(function () use ($request, $interestRate, $termMonths, $organisation) {
-                // 1. Create user — pre-verified by partner
-                $user = User::create([
-                    'organisation_id'     => $organisation->id,
-                    'fullname'            => $request->fullname,
-                    'phone_number'        => $request->phone_number,
-                    'email'               => $request->email,
-                    'dob'                 => $request->dob,
-                    'gender'              => $request->gender,
-                    'nin'                 => $request->nin,
-                    'bvn'                 => $request->bvn,
-                    'residential_address' => $request->residential_address,
-                    'state'               => $request->state,
-                    'lga'                 => $request->lga,
-                    'bank_name'           => $request->bank_name,
-                    'bank_account_number' => $request->bank_account_number,
-                    'bank_account_name'   => $request->bank_account_name,
-                    'bank_code'           => $request->bank_code,
-                    'phone_verified_at'   => now(),
-                    'bank_connected_at'   => now(),
-                    'kyc_status'          => 'verified',
-                    'account_level'       => 'tier_3',
-                    'status'              => 'active',
-                ]);
+            $result = DB::transaction(function () use ($request, $interestRate, $termMonths, $organisation, $existingUser, $isNewUser) {
 
-                // 2. Address record
-                $address = $user->addresses()->create([
-                    'residential_address' => $request->residential_address,
-                    'state'               => $request->state,
-                    'lga'                 => $request->lga,
-                    'verification_status' => 'verified',
-                ]);
-
-                // 3. Guarantors
-                $guarantors = [];
-                foreach ($request->guarantors as $guarantorData) {
-                    $guarantors[] = $user->guarantors()->create([
-                        'guarantor_type' => $guarantorData['guarantor_type'],
-                        'name'           => $guarantorData['name'],
-                        'phone_number'   => $guarantorData['phone_number'],
-                        'relationship'   => $guarantorData['relationship'],
+                // 1. User — create or update
+                if ($isNewUser) {
+                    $user = User::create([
+                        'organisation_id'     => $organisation->id,
+                        'fullname'            => $request->fullname,
+                        'phone_number'        => $request->phone_number,
+                        'email'               => $request->email,
+                        'dob'                 => $request->dob,
+                        'gender'              => $request->gender,
+                        'nin'                 => $request->nin,
+                        'bvn'                 => $request->bvn,
+                        'residential_address' => $request->residential_address,
+                        'state'               => $request->state,
+                        'lga'                 => $request->lga,
+                        'bank_name'           => $request->bank_name,
+                        'bank_account_number' => $request->bank_account_number,
+                        'bank_account_name'   => $request->bank_account_name,
+                        'bank_code'           => $request->bank_code,
+                        'phone_verified_at'   => now(),
+                        'bank_connected_at'   => now(),
+                        'kyc_status'          => 'verified',
+                        'account_level'       => 'tier_3',
+                        'status'              => 'active',
                     ]);
+                } else {
+                    $user = $existingUser;
+
+                    $userUpdates = array_filter([
+                        'fullname'            => $request->fullname,
+                        'email'               => $request->email,
+                        'dob'                 => $request->dob,
+                        'gender'              => $request->gender,
+                        'nin'                 => $request->nin,
+                        'bvn'                 => $request->bvn,
+                        'residential_address' => $request->residential_address,
+                        'state'               => $request->state,
+                        'lga'                 => $request->lga,
+                        'bank_name'           => $request->bank_name,
+                        'bank_account_number' => $request->bank_account_number,
+                        'bank_account_name'   => $request->bank_account_name,
+                        'bank_code'           => $request->bank_code,
+                    ], fn($v) => $v !== null);
+
+                    if (!empty($userUpdates)) {
+                        if (isset($userUpdates['bank_name']) || isset($userUpdates['bank_account_number'])) {
+                            $userUpdates['bank_connected_at'] = now();
+                        }
+                        $user->update($userUpdates);
+                    }
                 }
 
-                // 4. Employment (optional)
+                // 2. Address — create for new user; update latest (or create) if fields supplied
+                if ($isNewUser) {
+                    $address = $user->addresses()->create([
+                        'residential_address' => $request->residential_address,
+                        'state'               => $request->state,
+                        'lga'                 => $request->lga,
+                        'verification_status' => 'verified',
+                    ]);
+                } elseif ($request->filled('residential_address') || $request->filled('state') || $request->filled('lga')) {
+                    $addressData = array_filter([
+                        'residential_address' => $request->residential_address,
+                        'state'               => $request->state,
+                        'lga'                 => $request->lga,
+                    ], fn($v) => $v !== null);
+
+                    $address = $user->addresses()->latest()->first();
+                    if ($address) {
+                        $address->update($addressData);
+                    } else {
+                        $address = $user->addresses()->create(array_merge($addressData, ['verification_status' => 'verified']));
+                    }
+                } else {
+                    $address = $user->addresses()->latest()->first();
+                }
+
+                // 3. Guarantors — create for new user; updateOrCreate by type if supplied; else use existing
+                $guarantors = [];
+                if (!empty($request->guarantors)) {
+                    foreach ($request->guarantors as $guarantorData) {
+                        $payload = array_filter([
+                            'name'         => $guarantorData['name'],
+                            'phone_number' => $guarantorData['phone_number'],
+                            'relationship' => $guarantorData['relationship'],
+                            'id_type'      => $guarantorData['id_type'] ?? null,
+                        ], fn($v) => $v !== null);
+
+                        $guarantors[] = $user->guarantors()->updateOrCreate(
+                            ['guarantor_type' => $guarantorData['guarantor_type']],
+                            $payload
+                        );
+                    }
+                } else {
+                    $guarantors = $user->guarantors()->orderBy('guarantor_type')->get()->all();
+                }
+
+                // 4. Employment — create for new user; update latest (or create) if supplied; else use existing
                 $employment = null;
                 if ($request->filled('employment')) {
-                    $emp        = $request->employment;
-                    $employment = $user->employments()->create([
+                    $emp            = $request->employment;
+                    $employmentData = [
                         'employment_information' => $emp['employment_information'],
                         'occupation'             => $emp['occupation'],
                         'educational_details'    => $emp['educational_details'] ?? null,
                         'income'                 => $emp['income'],
                         'verification_status'    => 'verified',
-                    ]);
+                    ];
+
+                    $employment = $user->employments()->latest()->first();
+                    if ($employment) {
+                        $employment->update($employmentData);
+                    } else {
+                        $employment = $user->employments()->create($employmentData);
+                    }
+                } else {
+                    $employment = $user->employments()->latest()->first();
                 }
 
-                // 5. Loan
+                // 5. Loan — always create a new record
                 $amount             = (float) $request->amount_requested;
                 $totalInterest      = round($amount * ($interestRate / 100) * ($termMonths / 12), 2);
                 $totalRepayable     = round($amount + $totalInterest, 2);
@@ -166,19 +177,23 @@ class PartnerLoanApplicationController extends Controller
                 return compact('user', 'address', 'guarantors', 'employment', 'loan');
             });
 
+            $message = $isNewUser
+                ? 'Loan application submitted successfully. The user can set their password when they visit the app.'
+                : 'Loan application submitted successfully.';
+
             return response()->json([
                 'status'  => 'success',
-                'message' => 'Loan application submitted successfully. The user can set their password when they visit the app.',
+                'message' => $message,
                 'data'    => [
                     'user'         => $result['user']->only([
                         'id', 'fullname', 'phone_number', 'email',
                         'kyc_status', 'account_level', 'status', 'organisation_id',
                     ]),
                     'organisation' => $organisation->only(['id', 'name', 'slug']),
-                    'address'    => $result['address'],
-                    'guarantors' => $result['guarantors'],
-                    'employment' => $result['employment'],
-                    'loan'       => $result['loan'],
+                    'address'      => $result['address'],
+                    'guarantors'   => $result['guarantors'],
+                    'employment'   => $result['employment'],
+                    'loan'         => $result['loan'],
                 ],
             ], 201);
 
@@ -189,5 +204,33 @@ class PartnerLoanApplicationController extends Controller
                 'message' => 'An error occurred while processing the application. Please try again.',
             ], 500);
         }
+    }
+
+    public function show(string $phone)
+    {
+        $user = User::where('phone_number', $phone)->first();
+
+        if (!$user) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'No user found with this phone number.',
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => [
+                'user'       => $user->only([
+                    'id', 'fullname', 'phone_number', 'email', 'dob', 'gender',
+                    'nin', 'bvn', 'residential_address', 'state', 'lga',
+                    'bank_name', 'bank_account_number', 'bank_account_name',
+                    'kyc_status', 'account_level', 'status', 'organisation_id',
+                ]),
+                'address'    => $user->addresses()->latest()->first(),
+                'guarantors' => $user->guarantors()->orderBy('guarantor_type')->get(),
+                'employment' => $user->employments()->latest()->first(),
+                'loans'      => $user->loans()->with('payments')->orderBy('created_at', 'desc')->get(),
+            ],
+        ]);
     }
 }

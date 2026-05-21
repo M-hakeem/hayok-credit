@@ -66,8 +66,10 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
 // Partner integration endpoint — secured by X-Partner-Key header
 Route::middleware('partner')->prefix('partner')->group(function () {
     Route::post('loan-application', [PartnerLoanApplicationController::class, 'store']);
+    Route::get('loan-application/{phone}', [PartnerLoanApplicationController::class, 'show']);
 });
 
 Route::middleware('auth:sanctum')->apiResource('address', AddressController::class);
 Route::middleware('auth:sanctum')->apiResource('employment', EmploymentController::class);
 Route::middleware('auth:sanctum')->apiResource('guarantor', GuarantorController::class);
+Route::middleware('auth:sanctum')->post('guarantor/{id}/id-document', [GuarantorController::class, 'uploadIdDocument']);
