@@ -183,6 +183,7 @@ class PartnerLoanApplicationController extends Controller
             ], 201);
 
         } catch (\Throwable $e) {
+            \Log::error('PartnerLoanApplication failed: ' . $e->getMessage(), ['exception' => $e]);
             return response()->json([
                 'status'  => 'error',
                 'message' => 'An error occurred while processing the application. Please try again.',

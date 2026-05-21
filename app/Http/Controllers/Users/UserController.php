@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Users;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UpdateProfileRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -69,29 +70,11 @@ class UserController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request)
+    public function update(UpdateProfileRequest $request)
     {
         $user = auth()->user();
 
-        if (!$user) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthorized'
-            ], 401);
-        }
-
-        $data = $request->only([
-            'fullname',
-            'dob',
-            'gender',
-            'email',
-            'residential_address',
-            'state',
-            'lga',
-            'bvn',
-        ]);
-
-        $user->update($data);
+        $user->update($request->validated());
 
         return response()->json([
             'status' => 'success',
