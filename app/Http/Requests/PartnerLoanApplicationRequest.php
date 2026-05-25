@@ -70,7 +70,7 @@ class PartnerLoanApplicationRequest extends FormRequest
                 // New user — enforce required fields
                 $required = [
                     'fullname', 'dob', 'gender', 'nin', 'bvn',
-                    'residential_address', 'state', 'lga',
+                    'residential_address',
                     'bank_name', 'bank_account_number', 'bank_account_name',
                 ];
                 foreach ($required as $field) {
