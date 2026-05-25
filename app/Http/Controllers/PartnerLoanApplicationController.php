@@ -10,6 +10,9 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
+/**
+ * @tags PartnerLoanApplication
+ */
 class PartnerLoanApplicationController extends Controller
 {
     public function store(PartnerLoanApplicationRequest $request)
@@ -205,6 +208,16 @@ class PartnerLoanApplicationController extends Controller
                 'debug'   => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
+    }
+
+    public function loanInterestRates()
+    {
+        $settings = LoanInterestSetting::where('active', true)->orderBy('tenure_months')->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => $settings,
+        ]);
     }
 
     public function show(string $phone)
