@@ -202,6 +202,7 @@ class PartnerLoanApplicationController extends Controller
             return response()->json([
                 'status'  => 'error',
                 'message' => 'An error occurred while processing the application. Please try again.',
+                'debug'   => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
     }
