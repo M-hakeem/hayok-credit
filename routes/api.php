@@ -67,7 +67,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
 Route::middleware('partner')->prefix('partner')->group(function () {
     Route::post('loan-application', [PartnerLoanApplicationController::class, 'store']);
     Route::get('loan-application/{phone}', [PartnerLoanApplicationController::class, 'show']);
-    Route::get('loan-interest', [LoanInterestSettingController::class, 'index']);
+    Route::get('loan-interest', [PartnerLoanApplicationController::class, 'loanInterestRates']);
 });
 
 Route::middleware('auth:sanctum')->apiResource('address', AddressController::class);
