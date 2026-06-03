@@ -21,6 +21,7 @@ class UpdateProfileRequest extends FormRequest
             'residential_address'  => 'sometimes|string|min:10|max:255',
             'state'                => 'sometimes|string|min:2|max:50',
             'lga'                  => 'sometimes|string|min:2|max:50',
+            'nin'                  => 'sometimes|string|size:11',
             'bvn'                  => 'sometimes|string|size:11',
         ];
     }
