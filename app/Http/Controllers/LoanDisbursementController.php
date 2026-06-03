@@ -103,40 +103,62 @@ class LoanDisbursementController extends Controller
 
     private function notifyInsucare(LoanDisbursement $disbursement, Loan $loan): void
     {
-        $organisation = $loan->user->organisation;
+        $user         = $loan->user;
+        $organisation = $user?->organisation;
 
-        if (! $organisation || strtolower($organisation->name) !== 'insucare') {
+        if (! $organisation) {
+            Log::info('Insucare: skipped — loan user has no organisation', ['loan_id' => $loan->id]);
             return;
         }
 
-        try {
-            $user = $loan->user;
+        if (! str_contains(strtolower($organisation->name), 'insucare')) {
+            Log::info('Insucare: skipped — organisation is not insucare', [
+                'loan_id'   => $loan->id,
+                'org_name'  => $organisation->name,
+            ]);
+            return;
+        }
 
+        $payload = [
+            'phone_number'        => $user->phone_number,
+            'email'               => $user->email,
+            'bank_account_name'   => $disbursement->bank_account_name,
+            'bank_account_number' => $disbursement->bank_account_number,
+            'amount_requested'    => (float) $loan->amount_requested,
+            'transfer_reference'  => $disbursement->transaction_reference,
+        ];
+
+        Log::info('Insucare: sending subscription update', [
+            'loan_id'         => $loan->id,
+            'disbursement_id' => $disbursement->id,
+            'payload'         => $payload,
+        ]);
+
+        try {
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . config('services.insucare.secret_key'),
-                'Accept' => 'application/json',
-            ])->post(config('services.insucare.base_url') . '/api/insucare/subscription/update', [
-                'phone_number'       => $user->phone_number,
-                'email'              => $user->email,
-                'bank_account_name'  => $disbursement->bank_account_name,
-                'bank_account_number'=> $disbursement->bank_account_number,
-                'amount_requested'   => (float) $loan->amount_requested,
-                'transfer_reference' => $disbursement->transaction_reference,
-            ]);
+                'Accept'        => 'application/json',
+            ])->post(config('services.insucare.base_url') . '/api/insucare/subscription/update', $payload);
 
-            if ($response->failed()) {
-                Log::error('Insucare subscription update returned error', [
-                    'loan_id'        => $loan->id,
-                    'disbursement_id'=> $disbursement->id,
-                    'status'         => $response->status(),
-                    'response'       => $response->body(),
+            if ($response->successful()) {
+                Log::info('Insucare: subscription update successful', [
+                    'loan_id'  => $loan->id,
+                    'status'   => $response->status(),
+                    'response' => $response->body(),
+                ]);
+            } else {
+                Log::error('Insucare: subscription update returned error', [
+                    'loan_id'         => $loan->id,
+                    'disbursement_id' => $disbursement->id,
+                    'status'          => $response->status(),
+                    'response'        => $response->body(),
                 ]);
             }
         } catch (\Throwable $e) {
-            Log::error('Insucare subscription update failed', [
-                'loan_id'        => $loan->id,
-                'disbursement_id'=> $disbursement->id,
-                'error'          => $e->getMessage(),
+            Log::error('Insucare: subscription update exception', [
+                'loan_id'         => $loan->id,
+                'disbursement_id' => $disbursement->id,
+                'error'           => $e->getMessage(),
             ]);
         }
     }
