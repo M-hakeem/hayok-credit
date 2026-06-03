@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Organisation;
+use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -20,6 +21,10 @@ class OrganisationController extends Controller
         ]);
     }
 
+    #[BodyParameter('name', type: 'string', required: true, description: 'Organisation name (max 255 chars)')]
+    #[BodyParameter('email', type: 'string', required: false, description: 'Organisation contact email (must be unique)')]
+    #[BodyParameter('phone', type: 'string', required: false, description: 'Organisation phone number (max 20 chars)')]
+    #[BodyParameter('notes', type: 'string', required: false, description: 'Additional notes (max 1000 chars)')]
     public function store(Request $request)
     {
         $request->validate([
@@ -61,6 +66,11 @@ class OrganisationController extends Controller
         ]);
     }
 
+    #[BodyParameter('name', type: 'string', required: false, description: 'Organisation name (max 255 chars)')]
+    #[BodyParameter('email', type: 'string', required: false, description: 'Organisation contact email')]
+    #[BodyParameter('phone', type: 'string', required: false, description: 'Organisation phone number (max 20 chars)')]
+    #[BodyParameter('status', type: 'string', required: false, description: 'Organisation status: active, inactive, or suspended')]
+    #[BodyParameter('notes', type: 'string', required: false, description: 'Additional notes (max 1000 chars)')]
     public function update(Request $request, $id)
     {
         $organisation = Organisation::findOrFail($id);

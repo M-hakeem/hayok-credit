@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Loan;
 use App\Models\LoanPayment;
 use App\Models\RepaymentSchedule;
+use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Http\Request;
 
 class LoanPaymentController extends Controller
@@ -24,6 +25,9 @@ class LoanPaymentController extends Controller
         ]);
     }
 
+    #[BodyParameter('amount_paid', type: 'number', required: true, description: 'Amount being paid for this installment (min 0.01)')]
+    #[BodyParameter('payment_reference', type: 'string', required: false, description: 'Payment reference string (max 255 chars)')]
+    #[BodyParameter('payment_method', type: 'string', required: false, description: 'Payment method: wallet, bank, or external')]
     public function store(Request $request, $loanId)
     {
         $request->validate([

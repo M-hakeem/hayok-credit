@@ -39,4 +39,9 @@ return [
         'api_key' => env('PARTNER_API_KEY'),
     ],
 
+    'insucare' => [
+        'secret_key' => env('INSUCARE_SECRET_KEY'),
+        'base_url' => env('INSUCARE_BASE_URL', 'https://api.insucare.ng'),
+    ],
+
 ];
