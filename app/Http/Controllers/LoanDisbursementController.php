@@ -34,7 +34,31 @@ class LoanDisbursementController extends Controller
 
         $disbursement = LoanDisbursement::with('loan.user.organisation')
             ->where('loan_id', $id)
-            ->firstOrFail();
+            ->first();
+
+        if (! $disbursement) {
+            $loan = \App\Models\Loan::with('user.organisation')->find($id);
+
+            if (! $loan || $loan->status !== 'approved') {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'No disbursement record found. Ensure the loan is approved first.',
+                ], 404);
+            }
+
+            $disbursement = \App\Models\LoanDisbursement::create([
+                'loan_id'             => $loan->id,
+                'user_id'             => $loan->user_id,
+                'amount'              => $loan->amount_requested,
+                'bank_name'           => $loan->user->bank_name ?? '',
+                'bank_account_number' => $loan->user->bank_account_number ?? '',
+                'bank_account_name'   => $loan->user->bank_account_name ?? '',
+                'bank_code'           => $loan->user->bank_code,
+                'status'              => 'pending',
+            ]);
+
+            $disbursement->load('loan.user.organisation');
+        }
 
         if ($disbursement->status !== 'pending') {
             return response()->json([

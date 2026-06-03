@@ -8,6 +8,7 @@ use App\Models\LoanDisbursement;
 use App\Models\LoanInterestSetting;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class LoanController extends Controller
 {
@@ -153,25 +154,26 @@ class LoanController extends Controller
 
         $admin = auth()->user();
 
-        $loan->update([
-            'status' => 'approved',
-            'approved_by' => $admin->id,
-            'approved_at' => now(),
-            'review_notes' => $request->review_notes,
-            'risk_grade' => $request->risk_grade,
-        ]);
+        DB::transaction(function () use ($loan, $request, $admin) {
+            $loan->update([
+                'status'       => 'approved',
+                'approved_by'  => $admin->id,
+                'approved_at'  => now(),
+                'review_notes' => $request->review_notes,
+                'risk_grade'   => $request->risk_grade,
+            ]);
 
-        // Create disbursement record now that the loan is approved
-        LoanDisbursement::create([
-            'loan_id' => $loan->id,
-            'user_id' => $loan->user_id,
-            'amount' => $loan->amount_requested,
-            'bank_name' => $loan->user->bank_name,
-            'bank_account_number' => $loan->user->bank_account_number,
-            'bank_account_name' => $loan->user->bank_account_name,
-            'bank_code' => $loan->user->bank_code,
-            'status' => 'pending',
-        ]);
+            LoanDisbursement::create([
+                'loan_id'            => $loan->id,
+                'user_id'            => $loan->user_id,
+                'amount'             => $loan->amount_requested,
+                'bank_name'          => $loan->user->bank_name ?? '',
+                'bank_account_number'=> $loan->user->bank_account_number ?? '',
+                'bank_account_name'  => $loan->user->bank_account_name ?? '',
+                'bank_code'          => $loan->user->bank_code,
+                'status'             => 'pending',
+            ]);
+        });
 
         return response()->json([
             'status' => 'success',
