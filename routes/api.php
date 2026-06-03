@@ -49,9 +49,9 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::get('loan-interest', [LoanInterestSettingController::class, 'index']);
     Route::post('loan-interest', [LoanInterestSettingController::class, 'store']);
     Route::get('loan-disbursements', [LoanDisbursementController::class, 'index']);
-    Route::post('loan-disbursements/{id}/disburse', [LoanDisbursementController::class, 'disburse']);
     Route::post('loans/{id}/approve', [LoanController::class, 'approve']);
     Route::post('loans/{id}/reject', [LoanController::class, 'reject']);
+    Route::post('loans/{id}/disburse', [LoanDisbursementController::class, 'disburse']);
 
     // Organisation management
     Route::get('organisations', [OrganisationController::class, 'index']);
