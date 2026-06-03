@@ -160,8 +160,8 @@ class LoanDisbursementController extends Controller
 
         try {
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . config('services.insucare.secret_key'),
-                'Accept'        => 'application/json',
+                'X-API-KEY' => config('services.insucare.secret_key'),
+                'Accept'    => 'application/json',
             ])->post(config('services.insucare.base_url') . '/api/insucare/subscription/update', $payload);
 
             if ($response->successful()) {
