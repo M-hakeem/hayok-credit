@@ -6,6 +6,7 @@ use App\Http\Requests\StoreLoanRequest;
 use App\Models\Loan;
 use App\Models\LoanDisbursement;
 use App\Models\LoanInterestSetting;
+use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Http\Request;
 
 class LoanController extends Controller
@@ -103,6 +104,8 @@ class LoanController extends Controller
         ]);
     }
 
+    #[BodyParameter('review_notes', type: 'string', required: false, description: 'Admin review notes (max 1000 chars)')]
+    #[BodyParameter('risk_grade', type: 'string', required: false, description: 'Risk grade assigned to the loan (e.g. A, B+, max 10 chars)')]
     public function approve(Request $request, $id)
     {
         $request->validate([
@@ -148,6 +151,8 @@ class LoanController extends Controller
         ]);
     }
 
+    #[BodyParameter('review_notes', type: 'string', required: true, description: 'Reason for rejection (max 1000 chars)')]
+    #[BodyParameter('risk_grade', type: 'string', required: false, description: 'Risk grade assigned to the loan (e.g. A, B+, max 10 chars)')]
     public function reject(Request $request, $id)
     {
         $request->validate([

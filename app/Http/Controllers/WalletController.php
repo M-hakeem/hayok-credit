@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Withdrawal;
+use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Http\Request;
 
 class WalletController extends Controller
@@ -32,6 +33,10 @@ class WalletController extends Controller
         ]);
     }
 
+    #[BodyParameter('bank_name', type: 'string', required: true, description: 'Bank name (max 255 chars)')]
+    #[BodyParameter('bank_account_number', type: 'string', required: true, description: 'Bank account number (max 64 chars)')]
+    #[BodyParameter('bank_account_name', type: 'string', required: true, description: 'Account holder name as on the bank record (max 255 chars)')]
+    #[BodyParameter('bank_code', type: 'string', required: false, description: 'Bank sort/NIBSS code (max 32 chars)')]
     public function updateBankDetails(Request $request)
     {
         $user = auth()->user();
@@ -59,6 +64,9 @@ class WalletController extends Controller
         ]);
     }
 
+    #[BodyParameter('amount', type: 'number', required: true, description: 'Amount to deposit (min 0.01)')]
+    #[BodyParameter('reference', type: 'string', required: false, description: 'Payment reference (max 255 chars)')]
+    #[BodyParameter('description', type: 'string', required: false, description: 'Deposit description (max 255 chars)')]
     public function deposit(Request $request)
     {
         $request->validate([
@@ -89,6 +97,9 @@ class WalletController extends Controller
         ]);
     }
 
+    #[BodyParameter('amount', type: 'number', required: true, description: 'Amount to withdraw (min 1)')]
+    #[BodyParameter('reference', type: 'string', required: false, description: 'Withdrawal reference (max 255 chars)')]
+    #[BodyParameter('description', type: 'string', required: false, description: 'Withdrawal description (max 255 chars)')]
     public function withdraw(Request $request)
     {
         $request->validate([

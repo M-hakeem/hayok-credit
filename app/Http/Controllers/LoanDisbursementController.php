@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Loan;
 use App\Models\LoanDisbursement;
 use App\Models\RepaymentSchedule;
+use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class LoanDisbursementController extends Controller
@@ -22,13 +25,14 @@ class LoanDisbursementController extends Controller
         ]);
     }
 
+    #[BodyParameter('transaction_reference', type: 'string', required: false, description: 'Bank transfer reference (max 255 chars)')]
     public function disburse(Request $request, $id)
     {
         $request->validate([
             'transaction_reference' => 'nullable|string|max:255',
         ]);
 
-        $disbursement = LoanDisbursement::with('loan')
+        $disbursement = LoanDisbursement::with('loan.user.organisation')
             ->findOrFail($id);
 
         if ($disbursement->status !== 'pending') {
@@ -87,10 +91,52 @@ class LoanDisbursementController extends Controller
 
         $loan->update(['status' => 'active']);
 
+        $this->notifyInsucare($disbursement, $loan);
+
         return response()->json([
             'status' => 'success',
             'message' => 'Loan disbursement marked as disbursed.',
             'data' => $disbursement,
         ]);
+    }
+
+    private function notifyInsucare(LoanDisbursement $disbursement, Loan $loan): void
+    {
+        $organisation = $loan->user->organisation;
+
+        if (! $organisation || strtolower($organisation->name) !== 'insucare') {
+            return;
+        }
+
+        try {
+            $user = $loan->user;
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . config('services.insucare.secret_key'),
+                'Accept' => 'application/json',
+            ])->post(config('services.insucare.base_url') . '/api/insucare/subscription/update', [
+                'phone_number'       => $user->phone_number,
+                'email'              => $user->email,
+                'bank_account_name'  => $disbursement->bank_account_name,
+                'bank_account_number'=> $disbursement->bank_account_number,
+                'amount_requested'   => (float) $loan->amount_requested,
+                'transfer_reference' => $disbursement->transaction_reference,
+            ]);
+
+            if ($response->failed()) {
+                Log::error('Insucare subscription update returned error', [
+                    'loan_id'        => $loan->id,
+                    'disbursement_id'=> $disbursement->id,
+                    'status'         => $response->status(),
+                    'response'       => $response->body(),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Insucare subscription update failed', [
+                'loan_id'        => $loan->id,
+                'disbursement_id'=> $disbursement->id,
+                'error'          => $e->getMessage(),
+            ]);
+        }
     }
 }

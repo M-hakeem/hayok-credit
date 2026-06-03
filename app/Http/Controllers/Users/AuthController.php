@@ -7,6 +7,7 @@ use App\Http\Requests\RegisterUserRequest;
 use App\Models\PhoneVerification;
 use App\Models\User;
 use Carbon\Carbon;
+use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -32,6 +33,7 @@ class AuthController extends Controller
      * Store a newly created resource in storage.
      */
 
+    #[BodyParameter('phone', type: 'string', required: true, description: 'Phone number to send OTP to (e.g. +2347061234567)')]
     public function sendPhoneOtp(Request $request)
     {
         $request->validate([
@@ -99,6 +101,9 @@ class AuthController extends Controller
     }
 
     // 2️⃣ Verify OTP
+    #[BodyParameter('phone', type: 'string', required: true, description: 'Phone number the OTP was sent to')]
+    #[BodyParameter('pin_id', type: 'string', required: true, description: 'Pin ID returned from the send-otp response')]
+    #[BodyParameter('pin', type: 'string', required: true, description: 'The 6-digit OTP code sent to the phone')]
     public function verifyPhoneOtp(Request $request)
     {
         $request->validate([
@@ -150,6 +155,9 @@ class AuthController extends Controller
         ], 422);
     }
 
+    #[BodyParameter('phone_number', type: 'string', required: true, description: 'Verified phone number')]
+    #[BodyParameter('password', type: 'string', required: true, description: 'Password (min 6 characters)')]
+    #[BodyParameter('password_confirmation', type: 'string', required: true, description: 'Must match the password field')]
     public function setPassword(Request $request)
     {
         $request->validate([
@@ -209,6 +217,8 @@ class AuthController extends Controller
 
     // 3️⃣ Register user (only after OTP verified)
 
+    #[BodyParameter('phone_number', type: 'string', required: true, description: 'Registered phone number')]
+    #[BodyParameter('password', type: 'string', required: true, description: 'Account password')]
     public function login(Request $request)
     {
         $request->validate([
