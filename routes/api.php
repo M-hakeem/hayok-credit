@@ -45,13 +45,16 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::delete('{id}', [UserController::class, 'destroy']);
 });
 
+Route::middleware('auth:sanctum')->get('loan-interest', [LoanInterestSettingController::class, 'index']);
+
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
-    Route::get('loan-interest', [LoanInterestSettingController::class, 'index']);
     Route::post('loan-interest', [LoanInterestSettingController::class, 'store']);
-    Route::get('loan-disbursements', [LoanDisbursementController::class, 'index']);
+    Route::get('loans', [LoanController::class, 'adminIndex']);
+    Route::get('loans/{id}', [LoanController::class, 'adminShow']);
     Route::post('loans/{id}/approve', [LoanController::class, 'approve']);
     Route::post('loans/{id}/reject', [LoanController::class, 'reject']);
     Route::post('loans/{id}/disburse', [LoanDisbursementController::class, 'disburse']);
+    Route::get('loan-disbursements', [LoanDisbursementController::class, 'index']);
 
     // Organisation management
     Route::get('organisations', [OrganisationController::class, 'index']);

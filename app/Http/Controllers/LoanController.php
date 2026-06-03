@@ -95,12 +95,41 @@ class LoanController extends Controller
         $user = auth()->user();
 
         $loan = Loan::with(['payments', 'disbursement', 'repaymentSchedules'])
-            ->where('user_id', $user->id)
             ->findOrFail($id);
+
+        if ($loan->user_id !== $user->id) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Loan not found.',
+            ], 404);
+        }
 
         return response()->json([
             'status' => 'success',
             'data' => $loan,
+        ]);
+    }
+
+    public function adminIndex()
+    {
+        $loans = Loan::with(['user', 'disbursement'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => $loans,
+        ]);
+    }
+
+    public function adminShow($id)
+    {
+        $loan = Loan::with(['user', 'payments', 'disbursement', 'repaymentSchedules'])
+            ->findOrFail($id);
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => $loan,
         ]);
     }
 
