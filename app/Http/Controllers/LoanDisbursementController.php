@@ -33,7 +33,8 @@ class LoanDisbursementController extends Controller
         ]);
 
         $disbursement = LoanDisbursement::with('loan.user.organisation')
-            ->findOrFail($id);
+            ->where('loan_id', $id)
+            ->firstOrFail();
 
         if ($disbursement->status !== 'pending') {
             return response()->json([
