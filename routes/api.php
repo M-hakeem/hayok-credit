@@ -19,6 +19,7 @@ Route::prefix('auth')->group(function () {
     Route::post('verify-otp', [AuthController::class, 'verifyPhoneOtp'])->middleware('throttle:verify-otp');
     Route::post('set-password', [AuthController::class, 'setPassword']);
     Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login');
+    Route::post('admin-login', [AuthController::class, 'adminLogin'])->middleware('throttle:login');
 });
 
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {

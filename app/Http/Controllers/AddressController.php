@@ -15,7 +15,10 @@ class AddressController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $addresses = Address::where('user_id', $user->id)->get();
+
+        $addresses = $user->isAdmin()
+            ? Address::all()
+            : Address::where('user_id', $user->id)->get();
 
         return response()->json([
             'status' => 'success',

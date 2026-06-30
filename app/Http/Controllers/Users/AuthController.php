@@ -254,6 +254,50 @@ class AuthController extends Controller
         ]);
     }
 
+    #[BodyParameter('phone_number', type: 'string', required: true, description: 'Admin phone number')]
+    #[BodyParameter('password', type: 'string', required: true, description: 'Admin account password')]
+    public function adminLogin(Request $request)
+    {
+        $request->validate([
+            'phone_number' => 'required|string',
+            'password' => 'required|string',
+        ]);
+
+        $user = User::where('phone_number', $request->phone_number)->first();
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid phone number or password'
+            ], 401);
+        }
+
+        if ($user->role !== 'admin') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized. Admin access required.'
+            ], 403);
+        }
+
+        if ($user->is_blacklisted) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Your account has been suspended. Please contact support.'
+            ], 403);
+        }
+
+        $token = $user->createToken('admin_token')->plainTextToken;
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Admin login successful',
+            'data' => [
+                'token' => $token,
+                'user' => $user
+            ]
+        ]);
+    }
+
     /**
      * Display the specified resource.
      */
