@@ -14,7 +14,10 @@ class EmploymentController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $employments = Employment::where('user_id', $user->id)->get();
+
+        $employments = $user->isAdmin()
+            ? Employment::all()
+            : Employment::where('user_id', $user->id)->get();
 
         return response()->json([
             'status' => 'success',
@@ -85,7 +88,14 @@ class EmploymentController extends Controller
     public function show(string $id)
     {
         $user = auth()->user();
-        $employment = Employment::where('user_id', $user->id)->findOrFail($id);
+        $employment = Employment::where('user_id', $user->id)->find($id);
+
+        if (!$employment) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Employment record not found'
+            ], 404);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -152,7 +162,15 @@ class EmploymentController extends Controller
     public function destroy(string $id)
     {
         $user = auth()->user();
-        $employment = Employment::where('user_id', $user->id)->findOrFail($id);
+        $employment = Employment::where('user_id', $user->id)->find($id);
+
+        if (!$employment) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Employment record not found'
+            ], 404);
+        }
+
         $employment->delete();
 
         return response()->json([

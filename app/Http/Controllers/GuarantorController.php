@@ -16,9 +16,10 @@ class GuarantorController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $guarantors = Guarantor::where('user_id', $user->id)
-            ->orderBy('guarantor_type')
-            ->get();
+
+        $guarantors = $user->isAdmin()
+            ? Guarantor::orderBy('guarantor_type')->get()
+            : Guarantor::where('user_id', $user->id)->orderBy('guarantor_type')->get();
 
         return response()->json([
             'status' => 'success',
