@@ -6,6 +6,7 @@ use App\Http\Requests\StoreGuarantorRequest;
 use App\Http\Requests\UpdateGuarantorIdDocumentRequest;
 use App\Models\Guarantor;
 use Dedoc\Scramble\Attributes\BodyParameter;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Storage;
 
 class GuarantorController extends Controller
@@ -92,13 +93,22 @@ class GuarantorController extends Controller
      */
     public function show(string $id)
     {
-        $user = auth()->user();
-        $guarantor = Guarantor::where('user_id', $user->id)->findOrFail($id);
+        try {
+            $user = auth()->user();
+            $guarantor = $user->isAdmin()
+                ? Guarantor::findOrFail($id)
+                : Guarantor::where('user_id', $user->id)->findOrFail($id);
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $guarantor
-        ]);
+            return response()->json([
+                'status' => 'success',
+                'data' => $guarantor
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Guarantor not found'
+            ], 404);
+        }
     }
 
     /**
@@ -116,7 +126,9 @@ class GuarantorController extends Controller
     {
         try {
             $user = auth()->user();
-            $guarantor = Guarantor::where('user_id', $user->id)->findOrFail($id);
+            $guarantor = $user->isAdmin()
+                ? Guarantor::findOrFail($id)
+                : Guarantor::where('user_id', $user->id)->findOrFail($id);
 
             // Check if trying to change type to one that already exists
             if ($request->guarantor_type !== $guarantor->guarantor_type) {
@@ -176,7 +188,9 @@ class GuarantorController extends Controller
     {
         try {
             $user      = auth()->user();
-            $guarantor = Guarantor::where('user_id', $user->id)->findOrFail($id);
+            $guarantor = $user->isAdmin()
+                ? Guarantor::findOrFail($id)
+                : Guarantor::where('user_id', $user->id)->findOrFail($id);
 
             if ($guarantor->id_file_path && Storage::disk('public')->exists($guarantor->id_file_path)) {
                 Storage::disk('public')->delete($guarantor->id_file_path);
@@ -213,7 +227,9 @@ class GuarantorController extends Controller
     {
         try {
             $user = auth()->user();
-            $guarantor = Guarantor::where('user_id', $user->id)->findOrFail($id);
+            $guarantor = $user->isAdmin()
+                ? Guarantor::findOrFail($id)
+                : Guarantor::where('user_id', $user->id)->findOrFail($id);
             $guarantor->delete();
 
             return response()->json([
