@@ -88,7 +88,9 @@ class EmploymentController extends Controller
     public function show(string $id)
     {
         $user = auth()->user();
-        $employment = Employment::where('user_id', $user->id)->find($id);
+        $employment = $user->isAdmin()
+            ? Employment::find($id)
+            : Employment::where('user_id', $user->id)->find($id);
 
         if (!$employment) {
             return response()->json([
@@ -118,7 +120,9 @@ class EmploymentController extends Controller
     {
         try {
             $user = auth()->user();
-            $employment = Employment::where('user_id', $user->id)->findOrFail($id);
+            $employment = $user->isAdmin()
+                ? Employment::findOrFail($id)
+                : Employment::where('user_id', $user->id)->findOrFail($id);
 
             // Handle file upload if provided
             if ($request->hasFile('bank_statement')) {
@@ -162,7 +166,9 @@ class EmploymentController extends Controller
     public function destroy(string $id)
     {
         $user = auth()->user();
-        $employment = Employment::where('user_id', $user->id)->find($id);
+        $employment = $user->isAdmin()
+            ? Employment::find($id)
+            : Employment::where('user_id', $user->id)->find($id);
 
         if (!$employment) {
             return response()->json([

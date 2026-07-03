@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreAddressRequest;
 use App\Models\Address;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -88,13 +89,22 @@ class AddressController extends Controller
      */
     public function show(string $id)
     {
-        $user = auth()->user();
-        $address = Address::where('user_id', $user->id)->findOrFail($id);
+        try {
+            $user = auth()->user();
+            $address = $user->isAdmin()
+                ? Address::findOrFail($id)
+                : Address::where('user_id', $user->id)->findOrFail($id);
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $address
-        ]);
+            return response()->json([
+                'status' => 'success',
+                'data' => $address
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Address not found'
+            ], 404);
+        }
     }
 
     /**
@@ -112,7 +122,9 @@ class AddressController extends Controller
     {
         try {
             $user = auth()->user();
-            $address = Address::where('user_id', $user->id)->findOrFail($id);
+            $address = $user->isAdmin()
+                ? Address::findOrFail($id)
+                : Address::where('user_id', $user->id)->findOrFail($id);
 
             // Handle file upload if provided
             if ($request->hasFile('utility_bill')) {
@@ -154,13 +166,22 @@ class AddressController extends Controller
      */
     public function destroy(string $id)
     {
-        $user = auth()->user();
-        $address = Address::where('user_id', $user->id)->findOrFail($id);
-        $address->delete();
+        try {
+            $user = auth()->user();
+            $address = $user->isAdmin()
+                ? Address::findOrFail($id)
+                : Address::where('user_id', $user->id)->findOrFail($id);
+            $address->delete();
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Address deleted successfully'
-        ]);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Address deleted successfully'
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Address not found'
+            ], 404);
+        }
     }
 }
