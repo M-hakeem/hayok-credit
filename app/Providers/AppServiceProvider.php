@@ -48,6 +48,16 @@ class AppServiceProvider extends ServiceProvider
                 ], 429));
         });
 
+        // Max 3 password reset requests per phone per 10 minutes — prevents SMS flooding/billing abuse
+        RateLimiter::for('forgot-password', function (Request $request) {
+            return Limit::perMinutes(10, 3)
+                ->by($request->input('phone_number', $request->ip()))
+                ->response(fn () => response()->json([
+                    'status' => 'error',
+                    'message' => 'Too many password reset requests. Please wait before trying again.',
+                ], 429));
+        });
+
         // Max 5 login attempts per IP per minute — prevents credential stuffing
         RateLimiter::for('login', function (Request $request) {
             return Limit::perMinute(5)
