@@ -254,6 +254,120 @@ class AuthController extends Controller
         ]);
     }
 
+    // 4️⃣ Forgot password — send OTP to a registered phone
+    #[BodyParameter('phone_number', type: 'string', required: true, description: 'Registered phone number to reset the password for')]
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'phone_number' => 'required|string',
+        ]);
+
+        $user = User::where('phone_number', $request->phone_number)->first();
+
+        if (! $user) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'No account found with this phone number.',
+            ], 404);
+        }
+
+        if (! $user->password) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'No password set for this account yet. Please use set-password instead.',
+            ], 422);
+        }
+
+        // Call Termii API
+        $response = Http::post(env('TERMII_BASE_URL').'/api/sms/otp/send', [
+            "api_key" => env('TERMII_API_KEY'),
+            "message_type" => "NUMERIC",
+            "to" => $request->phone_number,
+            "from" => env('TERMII_SENDER_ID'),
+            "channel" => "generic",
+            "pin_attempts" => 3,
+            "pin_time_to_live" => 5,
+            "pin_length" => 6,
+            "pin_placeholder" => "< 1234 >",
+            "message_text" => "Your password reset code is < 1234 >",
+            "pin_type" => "NUMERIC"
+        ]);
+
+        $result = $response->json();
+
+        if (!isset($result['pinId'])) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to send OTP',
+                'data' => $result
+            ], 500);
+        }
+
+        PhoneVerification::updateOrCreate(
+            ['phone_number' => $request->phone_number],
+            [
+                'pin_id' => $result['pinId'],
+                'otp' => null,
+                'verified' => false,
+                'expires_at' => now()->addMinutes(5)
+            ]
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'OTP sent successfully',
+            'data' => $result
+        ]);
+    }
+
+    // 5️⃣ Reset password — after OTP verified via verify-otp
+    #[BodyParameter('phone_number', type: 'string', required: true, description: 'Verified phone number')]
+    #[BodyParameter('password', type: 'string', required: true, description: 'New password (min 6 characters)')]
+    #[BodyParameter('password_confirmation', type: 'string', required: true, description: 'Must match the password field')]
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'phone_number' => 'required|string',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        $verification = PhoneVerification::where('phone_number', $request->phone_number)->first();
+
+        if (! $verification || ! $verification->verified) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Phone number not verified.',
+            ], 422);
+        }
+
+        if ($verification->expires_at->isPast()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Verification has expired. Please request a new OTP.',
+            ], 422);
+        }
+
+        $user = User::where('phone_number', $request->phone_number)->first();
+
+        if (! $user) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'No account found with this phone number.',
+            ], 404);
+        }
+
+        $user->update(['password' => $request->password]);
+
+        // Invalidate the verification so it can't be replayed, and log out other sessions
+        $verification->update(['verified' => false]);
+        $user->tokens()->delete();
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Password reset successfully. You can now login.',
+        ]);
+    }
+
     #[BodyParameter('phone_number', type: 'string', required: true, description: 'Admin phone number')]
     #[BodyParameter('password', type: 'string', required: true, description: 'Admin account password')]
     public function adminLogin(Request $request)
