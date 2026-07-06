@@ -91,23 +91,26 @@ class LoanController extends Controller
         ], 201);
     }
 
-    public function show($id)
+   public function show($id)
     {
         $user = auth()->user();
 
-        $loan = Loan::with(['payments', 'disbursement', 'repaymentSchedules'])
-            ->findOrFail($id);
+        $loan = Loan::with([
+            'payments',
+            'disbursement',
+            'repaymentSchedules'
+        ])->find($id);
 
-        if ($loan->user_id !== $user->id) {
+        if (!$loan || $loan->user_id != $user->id) {
             return response()->json([
-                'status'  => 'error',
-                'message' => 'Loan not found.',
+                'status' => 'error',
+                'message' => 'Loan not found.'
             ], 404);
         }
 
         return response()->json([
             'status' => 'success',
-            'data' => $loan,
+            'data' => $loan
         ]);
     }
 
@@ -125,8 +128,14 @@ class LoanController extends Controller
 
     public function adminShow($id)
     {
-        $loan = Loan::with(['user', 'payments', 'disbursement', 'repaymentSchedules'])
-            ->findOrFail($id);
+        $loan = Loan::with(['user', 'payments', 'disbursement', 'repaymentSchedules'])->find($id);
+
+        if (! $loan) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Loan not found.',
+            ], 404);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -143,7 +152,14 @@ class LoanController extends Controller
             'risk_grade' => 'nullable|string|max:10',
         ]);
 
-        $loan = Loan::findOrFail($id);
+        $loan = Loan::find($id);
+
+        if (! $loan) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Loan not found.',
+            ], 404);
+        }
 
         if ($loan->status !== 'pending') {
             return response()->json([
@@ -191,7 +207,14 @@ class LoanController extends Controller
             'risk_grade' => 'nullable|string|max:10',
         ]);
 
-        $loan = Loan::findOrFail($id);
+        $loan = Loan::find($id);
+
+        if (! $loan) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Loan not found.',
+            ], 404);
+        }
 
         if ($loan->status !== 'pending') {
             return response()->json([

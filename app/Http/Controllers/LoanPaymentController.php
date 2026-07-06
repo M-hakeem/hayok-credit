@@ -10,12 +10,49 @@ use Illuminate\Http\Request;
 
 class LoanPaymentController extends Controller
 {
+    public function adminIndex()
+    {
+        $payments = LoanPayment::with(['loan', 'user'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $payments,
+        ]);
+    }
+
+    public function adminLoanPayments($loanId)
+    {
+        $loan = Loan::find($loanId);
+
+        if (! $loan) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Loan not found.',
+            ], 404);
+        }
+
+        $payments = $loan->payments()->orderBy('due_date')->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $payments,
+        ]);
+    }
+
     public function index($loanId)
     {
         $user = auth()->user();
 
-        $loan = Loan::where('user_id', $user->id)
-            ->findOrFail($loanId);
+        $loan = Loan::where('user_id', $user->id)->find($loanId);
+
+        if (! $loan) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Loan not found.',
+            ], 404);
+        }
 
         $payments = $loan->payments()->orderBy('due_date')->get();
 
@@ -38,8 +75,14 @@ class LoanPaymentController extends Controller
 
         $user = auth()->user();
 
-        $loan = Loan::where('user_id', $user->id)
-            ->findOrFail($loanId);
+        $loan = Loan::where('user_id', $user->id)->find($loanId);
+
+        if (! $loan) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Loan not found.',
+            ], 404);
+        }
 
         if (! in_array($loan->status, ['active'])) {
             return response()->json([
