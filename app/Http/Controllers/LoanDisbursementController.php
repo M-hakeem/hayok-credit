@@ -25,6 +25,31 @@ class LoanDisbursementController extends Controller
         ]);
     }
 
+    public function disbursedLoanHistory(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'nullable|integer|exists:users,id',
+        ]);
+
+        $disbursements = LoanDisbursement::with(['loan', 'user'])
+            ->where('status', 'disbursed')
+            ->when($request->filled('user_id'), fn ($query) => $query->where('user_id', $request->user_id))
+            ->orderBy('disbursed_at', 'desc')
+            ->get();
+
+        $history = $disbursements->groupBy('user_id')->map(function ($userDisbursements) {
+            return [
+                'user' => $userDisbursements->first()->user,
+                'loans' => $userDisbursements->pluck('loan')->values(),
+            ];
+        })->values();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $history,
+        ]);
+    }
+
     #[BodyParameter('transaction_reference', type: 'string', required: false, description: 'Bank transfer reference (max 255 chars)')]
     public function disburse(Request $request, $id)
     {
