@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AddressController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrganisationController;
 use App\Http\Controllers\PartnerLoanApplicationController;
 use App\Http\Controllers\EmploymentController;
@@ -51,6 +52,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
 Route::middleware('auth:sanctum')->get('loan-interest', [LoanInterestSettingController::class, 'index']);
 
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
+    Route::get('dashboard/stats', [DashboardController::class, 'stats']);
     Route::post('loan-interest', [LoanInterestSettingController::class, 'store']);
     Route::get('loans', [LoanController::class, 'adminIndex']);
     Route::get('loans/{id}', [LoanController::class, 'adminShow']);
@@ -58,6 +60,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::post('loans/{id}/reject', [LoanController::class, 'reject']);
     Route::post('loans/{id}/disburse', [LoanDisbursementController::class, 'disburse']);
     Route::get('loan-disbursements', [LoanDisbursementController::class, 'index']);
+    Route::get('loan-disbursements/history', [LoanDisbursementController::class, 'disbursedLoanHistory']);
     Route::get('loan-payments', [LoanPaymentController::class, 'adminIndex']);
     Route::get('loans/{id}/payments', [LoanPaymentController::class, 'adminLoanPayments']);
 
