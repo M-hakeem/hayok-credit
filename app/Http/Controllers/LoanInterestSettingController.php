@@ -39,4 +39,38 @@ class LoanInterestSettingController extends Controller
             'data' => $setting,
         ], 201);
     }
+
+    public function update(StoreLoanInterestSettingRequest $request, LoanInterestSetting $loanInterestSetting)
+    {
+        if ($request->boolean('active')) {
+            // Deactivate other active settings with the same tenure
+            LoanInterestSetting::where('active', true)
+                ->where('tenure_months', $request->tenure_months)
+                ->where('id', '!=', $loanInterestSetting->id)
+                ->update(['active' => false]);
+        }
+
+        $loanInterestSetting->update([
+            'interest_rate' => $request->interest_rate,
+            'tenure_months' => $request->tenure_months,
+            'active' => $request->boolean('active', true),
+            'notes' => $request->notes,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Loan interest rate updated successfully.',
+            'data' => $loanInterestSetting->fresh(),
+        ]);
+    }
+
+    public function destroy(LoanInterestSetting $loanInterestSetting)
+    {
+        $loanInterestSetting->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Loan interest rate deleted successfully.',
+        ]);
+    }
 }
