@@ -54,6 +54,8 @@ Route::middleware('auth:sanctum')->get('loan-interest', [LoanInterestSettingCont
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
     Route::post('loan-interest', [LoanInterestSettingController::class, 'store']);
+    Route::put('/loan-interest/{loanInterestSetting}', [LoanInterestSettingController::class, 'update']);
+    Route::delete('/loan-interest/{loanInterestSetting}', [LoanInterestSettingController::class, 'destroy']);
     Route::get('loans', [LoanController::class, 'adminIndex']);
     Route::get('loans/{id}', [LoanController::class, 'adminShow']);
     Route::post('loans/{id}/approve', [LoanController::class, 'approve']);
