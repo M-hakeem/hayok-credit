@@ -23,8 +23,6 @@ class UpdateProfileRequest extends FormRequest
             'lga'                  => 'sometimes|string|min:2|max:50',
             'nin'                  => 'sometimes|string|size:11',
             'bvn'                  => 'sometimes|string|size:11',
-            'status'               => 'sometimes|string|in:active,inactive,suspended',
-            'kyc_status'           => 'sometimes|string|in:pending,verified,rejected'
         ];
     }
 }
