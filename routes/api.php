@@ -65,6 +65,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::get('loan-disbursements/history', [LoanDisbursementController::class, 'disbursedLoanHistory']);
     Route::get('loan-payments', [LoanPaymentController::class, 'adminIndex']);
     Route::get('loans/{id}/payments', [LoanPaymentController::class, 'adminLoanPayments']);
+    Route::put('user/status/{id}', [UserController::class, 'updateStatus']);
 
     // Organisation management
     Route::get('organisations', [OrganisationController::class, 'index']);

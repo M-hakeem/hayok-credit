@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateProfileRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -80,6 +81,33 @@ class UserController extends Controller
             'status' => 'success',
             'message' => 'Profile updated successfully',
             'user' => $user
+        ]);
+    }
+
+    public function updateStatus(Request $request, string $id)
+    {
+        $validated = $request->validate([
+            'status' => [
+                'required',
+                Rule::in(['active', 'inactive', 'suspended']),
+            ],
+            'kyc_status' => [
+                'required',
+                Rule::in(['pending', 'verified', 'rejected']),
+            ],
+        ]);
+
+        $user = User::findOrFail($id);
+
+        $user->update([
+            'status' => $validated['status'],
+            'kyc_status' => $validated['kyc_status'],
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'User status updated successfully.',
+            'user' => $user,
         ]);
     }
     /**
