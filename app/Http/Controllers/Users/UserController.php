@@ -95,6 +95,10 @@ class UserController extends Controller
                 'required',
                 Rule::in(['pending', 'verified', 'rejected']),
             ],
+            'account_level' => [
+                'required',
+                Rule::in(['tier_1', 'tier_2', 'tier_3']),
+            ],
         ]);
 
         $user = User::findOrFail($id);
@@ -102,6 +106,7 @@ class UserController extends Controller
         $user->update([
             'status' => $validated['status'],
             'kyc_status' => $validated['kyc_status'],
+            'account_level' => $validated['account_level'],
         ]);
 
         return response()->json([
