@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class BusinessLoanApplication extends Model
 {
-    use HasFactory;
+    use HasFactory,softdeletes;
 
     protected $fillable = [
         'reference',

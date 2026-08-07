@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class BusinessLoanDocument extends Model
 {
-    use HasFactory;
+    use HasFactory,softdeletes;
 
     protected $fillable = [
         'business_stakeholder_id',

@@ -21,6 +21,7 @@ return new class extends Migration
             $table->text('review_notes')->nullable();
             $table->timestamp('consent_at');
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('business_stakeholders', function (Blueprint $table) {
@@ -38,6 +39,7 @@ return new class extends Migration
             $table->string('role');
             $table->boolean('is_pep')->default(false);
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('business_loan_documents', function (Blueprint $table) {
@@ -53,6 +55,7 @@ return new class extends Migration
             $table->text('rejection_reason')->nullable();
             $table->timestamp('reviewed_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

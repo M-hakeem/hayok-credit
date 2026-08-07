@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class BusinessStakeholder extends Model
 {
-    use HasFactory;
+    use HasFactory,softdeletes;
 
     protected $fillable = [
         'full_name',
