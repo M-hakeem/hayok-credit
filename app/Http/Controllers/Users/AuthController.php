@@ -254,6 +254,18 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Revoke the access token used for the current request.
+     */
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()?->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Logout successful',
+        ]);
+    }
     // 4️⃣ Forgot password — send OTP to a registered phone
     #[BodyParameter('phone_number', type: 'string', required: true, description: 'Registered phone number to reset the password for')]
     public function forgotPassword(Request $request)
