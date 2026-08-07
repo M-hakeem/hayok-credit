@@ -1,18 +1,19 @@
 <?php
 
 use App\Http\Controllers\AddressController;
+use App\Http\Controllers\BusinessLoanApplicationController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\OrganisationController;
-use App\Http\Controllers\PartnerLoanApplicationController;
 use App\Http\Controllers\EmploymentController;
 use App\Http\Controllers\GuarantorController;
 use App\Http\Controllers\LoanController;
 use App\Http\Controllers\LoanDisbursementController;
 use App\Http\Controllers\LoanInterestSettingController;
 use App\Http\Controllers\LoanPaymentController;
-use App\Http\Controllers\WalletController;
+use App\Http\Controllers\OrganisationController;
+use App\Http\Controllers\PartnerLoanApplicationController;
 use App\Http\Controllers\Users\AuthController;
 use App\Http\Controllers\Users\UserController;
+use App\Http\Controllers\WalletController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -21,6 +22,7 @@ Route::prefix('auth')->group(function () {
     Route::post('set-password', [AuthController::class, 'setPassword']);
     Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login');
     Route::post('admin-login', [AuthController::class, 'adminLogin'])->middleware('throttle:login');
+    Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
     Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:forgot-password');
     Route::post('reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:verify-otp');
 });
@@ -53,6 +55,8 @@ Route::middleware('auth:sanctum')->get('loan-interest', [LoanInterestSettingCont
 
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
+    Route::get('business-loan-applications', [BusinessLoanApplicationController::class, 'index']);
+    Route::get('business-loan-applications/{businessLoanApplication}', [BusinessLoanApplicationController::class, 'show']);
     Route::post('loan-interest', [LoanInterestSettingController::class, 'store']);
     Route::put('/loan-interest/{loanInterestSetting}', [LoanInterestSettingController::class, 'update']);
     Route::delete('/loan-interest/{loanInterestSetting}', [LoanInterestSettingController::class, 'destroy']);
@@ -80,6 +84,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
 // Partner integration endpoint — secured by X-Partner-Key header
 Route::middleware('partner')->prefix('partner')->group(function () {
     Route::post('loan-application', [PartnerLoanApplicationController::class, 'store']);
+    Route::post('business-loan-applications', [BusinessLoanApplicationController::class, 'store']);
     Route::get('loan-application/{phone}', [PartnerLoanApplicationController::class, 'show']);
     Route::get('loan-interest', [PartnerLoanApplicationController::class, 'loanInterestRates']);
 });
