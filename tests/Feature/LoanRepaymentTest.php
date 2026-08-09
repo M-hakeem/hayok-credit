@@ -48,6 +48,11 @@ class LoanRepaymentTest extends TestCase
             'status' => 'pending',
         ]);
 
+        $user->wallet()->create([
+            'balance' => 0,
+            'currency' => 'NGN',
+        ]);
+
         $this->actingAs($user, 'sanctum')
             ->postJson("/api/admin/loan-disbursements/{$disbursement->id}/disburse", [
                 'transaction_reference' => 'txn-0002',

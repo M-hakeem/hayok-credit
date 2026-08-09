@@ -11,10 +11,14 @@ class WalletController extends Controller
     public function show()
     {
         $user = auth()->user();
-        $wallet = $user->wallet ?? $user->wallet()->create([
-            'balance' => 0,
-            'currency' => 'NGN',
-        ]);
+        $wallet = $user->wallet;
+
+        if (! $wallet) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Wallet not found. Verify your NIN or BVN and create a wallet first.',
+            ], 404);
+        }
 
         $wallet->load('transactions');
 
@@ -76,10 +80,14 @@ class WalletController extends Controller
         ]);
 
         $user = auth()->user();
-        $wallet = $user->wallet ?? $user->wallet()->create([
-            'balance' => 0,
-            'currency' => 'NGN',
-        ]);
+        $wallet = $user->wallet;
+
+        if (! $wallet) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Wallet not found. Verify your NIN or BVN and create a wallet first.',
+            ], 404);
+        }
 
         $transaction = $wallet->credit(
             (float) $request->amount,
@@ -117,10 +125,13 @@ class WalletController extends Controller
             ], 422);
         }
 
-        $wallet = $user->wallet ?? $user->wallet()->create([
-            'balance' => 0,
-            'currency' => 'NGN',
-        ]);
+        $wallet = $user->wallet;
+        if (! $wallet) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Wallet not found. Verify your NIN or BVN and create a wallet first.',
+            ], 404);
+        }
 
         try {
             $transaction = $wallet->debit(
