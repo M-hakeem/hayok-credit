@@ -109,10 +109,14 @@ class LoanPaymentController extends Controller
         $scheduleStatus = $newAmountPaid >= $schedule->total_due ? 'paid' : 'partial';
 
         if ($request->payment_method === 'wallet') {
-            $wallet = $user->wallet ?? $user->wallet()->create([
-                'balance' => 0,
-                'currency' => 'NGN',
-            ]);
+            $wallet = $user->wallet;
+
+            if (! $wallet) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Wallet not found. Verify your NIN or BVN and create a wallet first.',
+                ], 404);
+            }
 
             try {
                 $wallet->debit(

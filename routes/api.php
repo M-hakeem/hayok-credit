@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\BusinessLoanApplicationController;
+use App\Http\Controllers\ClaimifyWalletController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmploymentController;
 use App\Http\Controllers\GuarantorController;
@@ -33,6 +34,11 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
 
     // Wallet routes must come before the {id} wildcard
     Route::get('wallet', [WalletController::class, 'show']);
+    Route::post('wallet/banks', [ClaimifyWalletController::class, 'banks']);
+    Route::post('wallet/name-inquiry', [ClaimifyWalletController::class, 'nameInquiry'])->middleware('throttle:30,1');
+    Route::post('wallet/verification/initiate', [ClaimifyWalletController::class, 'initiateVerification'])->middleware('throttle:5,1');
+    Route::post('wallet/verification/validate', [ClaimifyWalletController::class, 'validateVerification'])->middleware('throttle:10,1');
+    Route::post('wallet/create-customer', [ClaimifyWalletController::class, 'createCustomer']);
     Route::post('wallet/bank', [WalletController::class, 'updateBankDetails']);
     Route::post('wallet/deposit', [WalletController::class, 'deposit']);
     Route::post('wallet/withdraw', [WalletController::class, 'withdraw']);
