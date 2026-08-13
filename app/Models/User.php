@@ -32,6 +32,7 @@ class User extends Authenticatable
         'nin',
         'bvn',
         'phone_number',
+        'profile_image',
         'phone_verified_at',
         'password',
         'bank_name',

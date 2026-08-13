@@ -50,4 +50,11 @@ return [
         'timeout' => env('CLAIMIFY_WALLET_TIMEOUT', 20),
     ],
 
+    'first_central' => [
+        'base_url' => env('FIRST_CENTRAL_BASE_URL', 'https://firstcentral.example.test/api/v1'),
+        'api_key' => env('FIRST_CENTRAL_API_KEY'),
+        'token' => env('FIRST_CENTRAL_TOKEN'),
+        'timeout' => env('FIRST_CENTRAL_TIMEOUT', 20),
+    ],
+
 ];
