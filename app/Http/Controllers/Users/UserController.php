@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateProfileRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class UserController extends Controller
@@ -74,13 +75,24 @@ class UserController extends Controller
     public function update(UpdateProfileRequest $request)
     {
         $user = auth()->user();
+        $data = $request->validated();
 
-        $user->update($request->validated());
+        if ($request->hasFile('profile_image')) {
+            if ($user->profile_image && Storage::disk('public')->exists($user->profile_image)) {
+                Storage::disk('public')->delete($user->profile_image);
+            }
+
+            $file = $request->file('profile_image');
+            $filename = time() . '_' . $user->id . '.' . $file->getClientOriginalExtension();
+            $data['profile_image'] = $file->storeAs('profile_images', $filename, 'public');
+        }
+
+        $user->update($data);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Profile updated successfully',
-            'user' => $user
+            'user' => $user->fresh()
         ]);
     }
 

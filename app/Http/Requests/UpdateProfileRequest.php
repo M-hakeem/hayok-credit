@@ -23,6 +23,7 @@ class UpdateProfileRequest extends FormRequest
             'lga'                  => 'sometimes|string|min:2|max:50',
             'nin'                  => 'sometimes|string|size:11',
             'bvn'                  => 'sometimes|string|size:11',
+            'profile_image'        => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:2048',
         ];
     }
 }
