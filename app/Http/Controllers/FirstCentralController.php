@@ -12,32 +12,18 @@ class FirstCentralController extends Controller
     {
     }
 
-    public function banks()
-    {
-        return $this->call(fn () => $this->firstCentral->banks());
-    }
-
-    public function resolveAccount(Request $request)
+    public function consumerMatch(Request $request)
     {
         $data = $request->validate([
-            'bank_code' => ['required', 'string', 'max:32'],
-            'account_number' => ['required', 'digits:10'],
+            'EnquiryReason' => ['required', 'string', 'max:255'],
+            'ConsumerName' => ['required', 'string', 'max:255'],
+            'DateOfBirth' => ['required', 'date'],
+            'Identification' => ['required', 'string', 'max:255'],
+            'Accountno' => ['required', 'string', 'max:255'],
+            'ProductID' => ['required', 'numeric'],
         ]);
 
-        return $this->call(fn () => $this->firstCentral->resolveAccount($data['bank_code'], $data['account_number']));
-    }
-
-    public function transfer(Request $request)
-    {
-        $data = $request->validate([
-            'amount' => ['required', 'numeric', 'min:1'],
-            'bank_code' => ['required', 'string', 'max:32'],
-            'account_number' => ['required', 'digits:10'],
-            'narration' => ['nullable', 'string', 'max:255'],
-            'reference' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        return $this->call(fn () => $this->firstCentral->transfer($data));
+        return $this->call(fn () => $this->firstCentral->consumerMatch($data));
     }
 
     private function call(callable $callback, int $status = 200)
