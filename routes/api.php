@@ -40,9 +40,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('wallet/verification/initiate', [ClaimifyWalletController::class, 'initiateVerification'])->middleware('throttle:5,1');
     Route::post('wallet/verification/validate', [ClaimifyWalletController::class, 'validateVerification'])->middleware('throttle:10,1');
     Route::post('wallet/create-customer', [ClaimifyWalletController::class, 'createCustomer']);
-    Route::post('wallet/first-central/banks', [FirstCentralController::class, 'banks']);
-    Route::post('wallet/first-central/resolve-account', [FirstCentralController::class, 'resolveAccount'])->middleware('throttle:30,1');
-    Route::post('wallet/first-central/transfer', [FirstCentralController::class, 'transfer'])->middleware('throttle:10,1');
+    Route::post('wallet/first-central/consumer-match', [FirstCentralController::class, 'consumerMatch'])->middleware('throttle:30,1');
     Route::post('wallet/bank', [WalletController::class, 'updateBankDetails']);
     Route::post('wallet/deposit', [WalletController::class, 'deposit']);
     Route::post('wallet/withdraw', [WalletController::class, 'withdraw']);

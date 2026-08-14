@@ -51,10 +51,12 @@ return [
     ],
 
     'first_central' => [
-        'base_url' => env('FIRST_CENTRAL_BASE_URL', 'https://firstcentral.example.test/api/v1'),
-        'api_key' => env('FIRST_CENTRAL_API_KEY'),
-        'token' => env('FIRST_CENTRAL_TOKEN'),
-        'timeout' => env('FIRST_CENTRAL_TIMEOUT', 20),
+    'base_url' => env('FIRST_CENTRAL_BASE_URL'),
+    'api_key' => env('FIRST_CENTRAL_API_KEY'),
+    'token' => env('FIRST_CENTRAL_TOKEN'),
+    'username' => env('FIRST_CENTRAL_USERNAME'),
+    'password' => env('FIRST_CENTRAL_PASSWORD'),
+    'timeout' => env('FIRST_CENTRAL_TIMEOUT', 20),
     ],
 
 ];
