@@ -16,7 +16,7 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = User::where('role', '!=', 'admin')->get();
+        $users = User::where('role', '!=', 'admin')->orderBy('created_at', 'DESC')->get();
 
         return response()->json([
             'status' => 'success',
