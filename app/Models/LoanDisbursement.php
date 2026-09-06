@@ -19,7 +19,6 @@ class LoanDisbursement extends Model
         'bank_account_name',
         'bank_code',
         'status',
-        'transaction_reference',
         'disbursed_at',
         'paystack_recipient_code',
         'provider',
@@ -50,11 +49,10 @@ class LoanDisbursement extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function markDisbursed(?string $transactionReference = null): void
+    public function markDisbursed(): void
     {
         $this->update([
             'status' => 'disbursed',
-            'transaction_reference' => $transactionReference,
             'disbursed_at' => now(),
         ]);
     }
