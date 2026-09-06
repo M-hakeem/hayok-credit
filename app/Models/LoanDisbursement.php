@@ -21,11 +21,23 @@ class LoanDisbursement extends Model
         'status',
         'transaction_reference',
         'disbursed_at',
+        'paystack_recipient_code',
+        'provider',
+        'provider_reference',
+        'transfer_code',
+        'failure_reason',
+        'gateway_response',
+        'metadata',
     ];
+
+    protected $hidden = ['bank_account_number'];
 
     protected $casts = [
         'amount' => 'decimal:2',
+            'bank_account_number' => \App\Casts\Encrypted::class,
         'disbursed_at' => 'datetime',
+        'gateway_response' => 'array',
+        'metadata' => 'array',
     ];
 
     public function loan()

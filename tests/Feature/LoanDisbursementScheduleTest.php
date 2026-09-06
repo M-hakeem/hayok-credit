@@ -49,9 +49,7 @@ class LoanDisbursementScheduleTest extends TestCase
         ]);
 
         $response = $this->actingAs($user, 'sanctum')
-            ->postJson("/api/admin/loan-disbursements/{$disbursement->id}/disburse", [
-                'transaction_reference' => 'txn-0001',
-            ]);
+            ->postJson("/api/admin/loans/{$loan->id}/disburse");
 
         $response->assertStatus(200);
 
