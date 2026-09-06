@@ -54,9 +54,7 @@ class LoanRepaymentTest extends TestCase
         ]);
 
         $this->actingAs($user, 'sanctum')
-            ->postJson("/api/admin/loan-disbursements/{$disbursement->id}/disburse", [
-                'transaction_reference' => 'txn-0002',
-            ])
+            ->postJson("/api/admin/loans/{$loan->id}/disburse")
             ->assertStatus(200);
 
         $user->wallet->credit(11000.00, 'Test deposit', 'deposit-001');

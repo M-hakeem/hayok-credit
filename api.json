@@ -1493,28 +1493,45 @@
                                                     "type": "string"
                                                 },
                                                 "risk_rating": {
-                                                    "type": "string"
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
                                                 },
                                                 "review_notes": {
-                                                    "type": "string"
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
                                                 },
                                                 "reviewed_at": {
-                                                    "type": "string"
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "format": "date-time"
                                                 },
                                                 "submitted_at": {
-                                                    "type": "string"
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "format": "date-time"
                                                 },
                                                 "consent_at": {
-                                                    "type": "string"
+                                                    "type": "string",
+                                                    "format": "date-time"
                                                 },
                                                 "business": {
-                                                    "type": "string"
+                                                    "type": "array",
+                                                    "items": {}
                                                 },
                                                 "account_owner": {
                                                     "type": "string"
                                                 },
                                                 "loan": {
-                                                    "type": "string"
+                                                    "type": "array",
+                                                    "items": {}
                                                 },
                                                 "documents": {
                                                     "type": "array",
@@ -1640,6 +1657,279 @@
                 "security": [
                     {
                         "partnerKey": []
+                    }
+                ]
+            }
+        },
+        "/user/wallet/verification/initiate": {
+            "post": {
+                "operationId": "claimifyWallet.initiateVerification",
+                "tags": [
+                    "ClaimifyWallet"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "NIN",
+                                            "BVN"
+                                        ]
+                                    },
+                                    "number": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "type",
+                                    "number"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "const": "success"
+                                                },
+                                                "data": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "status",
+                                                "data"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/user/wallet/verification/validate": {
+            "post": {
+                "operationId": "claimifyWallet.validateVerification",
+                "tags": [
+                    "ClaimifyWallet"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "identity_id": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "NIN",
+                                            "BVN"
+                                        ]
+                                    },
+                                    "otp": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "identity_id",
+                                    "type",
+                                    "otp"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "const": "success"
+                                                },
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {}
+                                                }
+                                            },
+                                            "required": [
+                                                "status",
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/user/wallet/create-customer": {
+            "post": {
+                "operationId": "claimifyWallet.createCustomer",
+                "tags": [
+                    "ClaimifyWallet"
+                ],
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "const": "error"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "An email address and phone number are required to create a wallet."
+                                                }
+                                            },
+                                            "required": [
+                                                "status",
+                                                "message"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "const": "error"
+                                                },
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "status",
+                                                "message"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "const": "error"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Verify your NIN or BVN before creating a wallet."
+                                                }
+                                            },
+                                            "required": [
+                                                "status",
+                                                "message"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
                     }
                 ]
             }
@@ -2112,6 +2402,100 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/user/wallet/first-central/consumer-match": {
+            "post": {
+                "operationId": "firstCentral.consumerMatch",
+                "tags": [
+                    "FirstCentral"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "EnquiryReason": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "ConsumerName": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "DateOfBirth": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "Identification": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "Accountno": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "ProductID": {
+                                        "type": "number"
+                                    }
+                                },
+                                "required": [
+                                    "EnquiryReason",
+                                    "ConsumerName",
+                                    "DateOfBirth",
+                                    "Identification",
+                                    "Accountno",
+                                    "ProductID"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "const": "success"
+                                                },
+                                                "data": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "status",
+                                                "data"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
@@ -3166,21 +3550,6 @@
                         }
                     }
                 ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "transaction_reference": {
-                                        "type": "string",
-                                        "description": "Bank transfer reference (max 255 chars)"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
                 "responses": {
                     "200": {
                         "description": "",
@@ -3210,8 +3579,114 @@
                             }
                         }
                     },
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Loan disbursement transfer initiated. Awaiting Paystack confirmation."
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "disbursement": {
+                                                    "anyOf": [
+                                                        {
+                                                            "$ref": "#/components/schemas/LoanDisbursement"
+                                                        },
+                                                        {
+                                                            "type": "null"
+                                                        }
+                                                    ]
+                                                },
+                                                "transfer": {
+                                                    "type": "array",
+                                                    "items": {}
+                                                }
+                                            },
+                                            "required": [
+                                                "disbursement",
+                                                "transfer"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
                     "422": {
-                        "$ref": "#/components/responses/ValidationException"
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "const": "error"
+                                                },
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "status",
+                                                "message"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "const": "error"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Loan must be approved before it can be disbursed."
+                                                }
+                                            },
+                                            "required": [
+                                                "status",
+                                                "message"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "const": "error"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "This disbursement has already been processed."
+                                                }
+                                            },
+                                            "required": [
+                                                "status",
+                                                "message"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "404": {
                         "description": "",
@@ -3739,6 +4214,23 @@
                             "application/json": {
                                 "schema": {
                                     "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "const": "error"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Wallet not found. Verify your NIN or BVN and create a wallet first."
+                                                }
+                                            },
+                                            "required": [
+                                                "status",
+                                                "message"
+                                            ]
+                                        },
                                         {
                                             "type": "object",
                                             "properties": {
@@ -4606,6 +5098,531 @@
                 ]
             }
         },
+        "/user/bank-account": {
+            "get": {
+                "operationId": "paystackBank.show",
+                "tags": [
+                    "PaystackBank"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "bank_name": {
+                                                    "type": "string"
+                                                },
+                                                "bank_code": {
+                                                    "type": "string"
+                                                },
+                                                "bank_account_name": {
+                                                    "type": "string"
+                                                },
+                                                "bank_account_number": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "bank_connected_at": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "bank_name",
+                                                "bank_code",
+                                                "bank_account_name",
+                                                "bank_account_number",
+                                                "bank_connected_at"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "operationId": "paystackBank.store",
+                "tags": [
+                    "PaystackBank"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "bank_code": {
+                                        "type": "string",
+                                        "maxLength": 32
+                                    },
+                                    "bank_account_number": {
+                                        "type": "string",
+                                        "minLength": 10,
+                                        "maxLength": 10
+                                    }
+                                },
+                                "required": [
+                                    "bank_code",
+                                    "bank_account_number"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Bank account validated successfully."
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "bank_name": {
+                                                    "type": "string"
+                                                },
+                                                "bank_code": {
+                                                    "type": "string"
+                                                },
+                                                "bank_account_name": {
+                                                    "type": "string"
+                                                },
+                                                "bank_account_number": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "bank_connected_at": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "bank_name",
+                                                "bank_code",
+                                                "bank_account_name",
+                                                "bank_account_number",
+                                                "bank_connected_at"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/paystack/banks": {
+            "get": {
+                "operationId": "paystackBank.index",
+                "tags": [
+                    "PaystackBank"
+                ],
+                "responses": {
+                    "502": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "error"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/user/payments/paystack/initialize-card": {
+            "post": {
+                "operationId": "paystackPayment.initializeCard",
+                "tags": [
+                    "PaystackPayment"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "reference": {
+                                                    "type": "string"
+                                                },
+                                                "transaction": {
+                                                    "type": "array",
+                                                    "items": {}
+                                                }
+                                            },
+                                            "required": [
+                                                "reference",
+                                                "transaction"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "error"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/user/payments/paystack/verify/{reference}": {
+            "get": {
+                "operationId": "paystackPayment.verifyCard",
+                "tags": [
+                    "PaystackPayment"
+                ],
+                "parameters": [
+                    {
+                        "name": "reference",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PaymentAuthorization"
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "error"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/user/payment-authorizations": {
+            "get": {
+                "operationId": "paystackPayment.authorizations",
+                "tags": [
+                    "PaystackPayment"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/user/payment-authorizations/{paymentAuthorization}": {
+            "delete": {
+                "operationId": "paystackPayment.revoke",
+                "tags": [
+                    "PaystackPayment"
+                ],
+                "parameters": [
+                    {
+                        "name": "paymentAuthorization",
+                        "in": "path",
+                        "required": true,
+                        "description": "The payment authorization ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Payment authorization revoked."
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/paystack/webhook": {
+            "post": {
+                "operationId": "paystackWebhook",
+                "tags": [
+                    "PaystackWebhook"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        }
+                                    },
+                                    "required": [
+                                        "status"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Invalid webhook signature."
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/user": {
             "get": {
                 "operationId": "user.index",
@@ -4660,7 +5677,7 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "$ref": "#/components/schemas/UpdateProfileRequest"
                             }
@@ -4977,7 +5994,10 @@
                                                             "type": "string"
                                                         },
                                                         "bank_account_number": {
-                                                            "type": "string"
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
                                                         },
                                                         "bank_account_name": {
                                                             "type": "string"
@@ -5007,6 +6027,30 @@
                                     "required": [
                                         "status",
                                         "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Wallet not found. Verify your NIN or BVN and create a wallet first."
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message"
                                     ]
                                 }
                             }
@@ -5179,6 +6223,30 @@
                             }
                         }
                     },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Wallet not found. Verify your NIN or BVN and create a wallet first."
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
                     },
@@ -5273,6 +6341,30 @@
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Wallet not found. Verify your NIN or BVN and create a wallet first."
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
@@ -5379,33 +6471,273 @@
                 "title": "Address"
             },
             "BusinessLoanApplication": {
-                "type": "array",
-                "items": {
-                    "type": "string"
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "reference": {
+                        "type": "string"
+                    },
+                    "business_profile": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "account_owner": {
+                        "type": "string"
+                    },
+                    "loan_details": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "risk_rating": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "reviewed_by": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "reviewed_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "review_notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "consent_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
                 },
-                "minItems": 0,
-                "maxItems": 0,
-                "additionalItems": false,
+                "required": [
+                    "id",
+                    "reference",
+                    "business_profile",
+                    "account_owner",
+                    "loan_details",
+                    "status",
+                    "risk_rating",
+                    "reviewed_by",
+                    "reviewed_at",
+                    "review_notes",
+                    "consent_at",
+                    "created_at",
+                    "updated_at",
+                    "deleted_at"
+                ],
                 "title": "BusinessLoanApplication"
             },
             "BusinessLoanDocument": {
-                "type": "array",
-                "items": {
-                    "type": "string"
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "business_loan_application_id": {
+                        "type": "integer"
+                    },
+                    "business_stakeholder_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "document_type": {
+                        "type": "string"
+                    },
+                    "file_path": {
+                        "type": "string"
+                    },
+                    "original_filename": {
+                        "type": "string"
+                    },
+                    "mime_type": {
+                        "type": "string"
+                    },
+                    "expires_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "rejection_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "reviewed_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
                 },
-                "minItems": 0,
-                "maxItems": 0,
-                "additionalItems": false,
+                "required": [
+                    "id",
+                    "business_loan_application_id",
+                    "business_stakeholder_id",
+                    "document_type",
+                    "file_path",
+                    "original_filename",
+                    "mime_type",
+                    "expires_at",
+                    "status",
+                    "rejection_reason",
+                    "reviewed_at",
+                    "created_at",
+                    "updated_at",
+                    "deleted_at"
+                ],
                 "title": "BusinessLoanDocument"
             },
             "BusinessStakeholder": {
-                "type": "array",
-                "items": {
-                    "type": "string"
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "business_loan_application_id": {
+                        "type": "integer"
+                    },
+                    "full_name": {
+                        "type": "string"
+                    },
+                    "date_of_birth": {
+                        "type": "string"
+                    },
+                    "gender": {
+                        "type": "string"
+                    },
+                    "nationality": {
+                        "type": "string"
+                    },
+                    "identification_type": {
+                        "type": "string"
+                    },
+                    "identification_number": {
+                        "type": "string"
+                    },
+                    "identification_expires_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "residential_address": {
+                        "type": "string"
+                    },
+                    "shareholding_percentage": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string"
+                    },
+                    "is_pep": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
                 },
-                "minItems": 0,
-                "maxItems": 0,
-                "additionalItems": false,
+                "required": [
+                    "id",
+                    "business_loan_application_id",
+                    "full_name",
+                    "date_of_birth",
+                    "gender",
+                    "nationality",
+                    "identification_type",
+                    "identification_number",
+                    "identification_expires_at",
+                    "residential_address",
+                    "shareholding_percentage",
+                    "role",
+                    "is_pep",
+                    "created_at",
+                    "updated_at",
+                    "deleted_at"
+                ],
                 "title": "BusinessStakeholder"
             },
             "Employment": {
@@ -5675,27 +7007,6 @@
                         ],
                         "format": "date-time"
                     },
-                    "created_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "updated_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "deleted_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
-                    },
                     "approved_by": {
                         "type": [
                             "integer",
@@ -5719,6 +7030,27 @@
                             "string",
                             "null"
                         ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
                     }
                 },
                 "required": [
@@ -5734,13 +7066,13 @@
                     "application_reason",
                     "approved_at",
                     "rejected_at",
-                    "created_at",
-                    "updated_at",
-                    "deleted_at",
                     "approved_by",
                     "rejected_by",
                     "review_notes",
-                    "risk_grade"
+                    "risk_grade",
+                    "created_at",
+                    "updated_at",
+                    "deleted_at"
                 ],
                 "title": "Loan"
             },
@@ -5760,9 +7092,6 @@
                         "type": "string"
                     },
                     "bank_name": {
-                        "type": "string"
-                    },
-                    "bank_account_number": {
                         "type": "string"
                     },
                     "bank_account_name": {
@@ -5789,6 +7118,50 @@
                             "null"
                         ],
                         "format": "date-time"
+                    },
+                    "paystack_recipient_code": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "provider": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "provider_reference": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "transfer_code": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "failure_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "gateway_response": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "metadata": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
                     },
                     "created_at": {
                         "type": [
@@ -5818,12 +7191,18 @@
                     "user_id",
                     "amount",
                     "bank_name",
-                    "bank_account_number",
                     "bank_account_name",
                     "bank_code",
                     "status",
                     "transaction_reference",
                     "disbursed_at",
+                    "paystack_recipient_code",
+                    "provider",
+                    "provider_reference",
+                    "transfer_code",
+                    "failure_reason",
+                    "gateway_response",
+                    "metadata",
                     "created_at",
                     "updated_at",
                     "deleted_at"
@@ -5903,6 +7282,12 @@
                             "null"
                         ]
                     },
+                    "payment_authorization_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
                     "user_id": {
                         "type": "integer"
                     },
@@ -5926,11 +7311,72 @@
                     "status": {
                         "type": "string"
                     },
+                    "provider": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
                     "payment_reference": {
                         "type": [
                             "string",
                             "null"
                         ]
+                    },
+                    "provider_reference": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "provider_transaction_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "amount_minor": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "failure_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "last_attempt_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "next_retry_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "attempt_count": {
+                        "type": "integer"
+                    },
+                    "gateway_response": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "metadata": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
                     },
                     "created_at": {
                         "type": [
@@ -5958,13 +7404,24 @@
                     "id",
                     "loan_id",
                     "repayment_schedule_id",
+                    "payment_authorization_id",
                     "user_id",
                     "due_date",
                     "amount_due",
                     "amount_paid",
                     "paid_at",
                     "status",
+                    "provider",
                     "payment_reference",
+                    "provider_reference",
+                    "provider_transaction_id",
+                    "amount_minor",
+                    "failure_reason",
+                    "last_attempt_at",
+                    "next_retry_at",
+                    "attempt_count",
+                    "gateway_response",
+                    "metadata",
                     "created_at",
                     "updated_at",
                     "deleted_at"
@@ -6245,6 +7702,125 @@
                     "term_months"
                 ],
                 "title": "PartnerLoanApplicationRequest"
+            },
+            "PaymentAuthorization": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "paystack_customer_code": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "authorization_code_hash": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "card_type": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "brand": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "last4": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "exp_month": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "exp_year": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "bank": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "country_code": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "channel": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "reusable": {
+                        "type": "boolean"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "id",
+                    "user_id",
+                    "paystack_customer_code",
+                    "authorization_code_hash",
+                    "email",
+                    "card_type",
+                    "brand",
+                    "last4",
+                    "exp_month",
+                    "exp_year",
+                    "bank",
+                    "country_code",
+                    "channel",
+                    "reusable",
+                    "status",
+                    "metadata",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "PaymentAuthorization"
             },
             "StoreAddressRequest": {
                 "type": "object",
@@ -6871,6 +8447,12 @@
                         "type": "string",
                         "minLength": 11,
                         "maxLength": 11
+                    },
+                    "profile_image": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "maxLength": 2048
                     }
                 },
                 "title": "UpdateProfileRequest"
@@ -6944,13 +8526,13 @@
                     "phone_number": {
                         "type": "string"
                     },
-                    "bank_name": {
+                    "profile_image": {
                         "type": [
                             "string",
                             "null"
                         ]
                     },
-                    "bank_account_number": {
+                    "bank_name": {
                         "type": [
                             "string",
                             "null"
@@ -7035,8 +8617,8 @@
                     "nin",
                     "bvn",
                     "phone_number",
+                    "profile_image",
                     "bank_name",
-                    "bank_account_number",
                     "bank_account_name",
                     "bank_code",
                     "bank_connected_at",

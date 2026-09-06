@@ -20,6 +20,17 @@ class LoanPayment extends Model
         'paid_at',
         'status',
         'payment_reference',
+        'payment_authorization_id',
+        'provider',
+        'provider_reference',
+        'provider_transaction_id',
+        'amount_minor',
+        'failure_reason',
+        'last_attempt_at',
+        'next_retry_at',
+        'attempt_count',
+        'gateway_response',
+        'metadata',
     ];
 
     protected $casts = [
@@ -27,6 +38,10 @@ class LoanPayment extends Model
         'paid_at' => 'datetime',
         'amount_due' => 'decimal:2',
         'amount_paid' => 'decimal:2',
+        'last_attempt_at' => 'datetime',
+        'next_retry_at' => 'datetime',
+        'gateway_response' => 'array',
+        'metadata' => 'array',
     ];
 
     public function loan()
@@ -42,5 +57,10 @@ class LoanPayment extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function paymentAuthorization()
+    {
+        return $this->belongsTo(PaymentAuthorization::class);
     }
 }

@@ -28,7 +28,7 @@ class WalletController extends Controller
                 'wallet' => $wallet,
                 'bank_details' => [
                     'bank_name' => $user->bank_name,
-                    'bank_account_number' => $user->bank_account_number,
+                    'bank_account_number' => $user->bank_account_number ? '********'.substr($user->bank_account_number, -4) : null,
                     'bank_account_name' => $user->bank_account_name,
                     'bank_code' => $user->bank_code,
                     'bank_connected_at' => $user->bank_connected_at,

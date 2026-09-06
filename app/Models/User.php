@@ -55,6 +55,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'bank_account_number',
     ];
 
     /**
@@ -72,6 +73,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'nin' => Encrypted::class,
             'bvn' => Encrypted::class,
+            'bank_account_number' => Encrypted::class,
         ];
     }
 
@@ -131,5 +133,10 @@ class User extends Authenticatable
     public function loans()
     {
         return $this->hasMany(Loan::class);
+    }
+
+    public function paymentAuthorizations()
+    {
+        return $this->hasMany(PaymentAuthorization::class);
     }
 }

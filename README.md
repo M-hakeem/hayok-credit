@@ -52,6 +52,37 @@ In order to ensure that the Laravel community is welcoming to all, please review
 
 ## Security Vulnerabilities
 
+## Paystack Configuration
+
+Set the server-only credentials in `.env`:
+
+```env
+PAYSTACK_SECRET_KEY=sk_test_...
+PAYSTACK_PUBLIC_KEY=pk_test_...
+PAYSTACK_BASE_URL=https://api.paystack.co
+PAYSTACK_WEBHOOK_SECRET=
+PAYSTACK_AUTHORIZATION_AMOUNT_KOBO=10000
+PAYSTACK_REPAYMENT_MAX_ATTEMPTS=3
+PAYSTACK_REPAYMENT_RETRY_DELAY_HOURS=24
+```
+
+The secret key must never be exposed to the mobile app or dashboard. Configure the Paystack dashboard webhook URL as:
+
+`https://your-domain.example/api/paystack/webhook`
+
+The application initializes a fixed NGN 100 card transaction. A card is stored only after Paystack verification confirms a successful transaction with a reusable authorization. Only the exact transaction email is used for future charges; the authorization code is encrypted at rest and is never returned by the API.
+
+Automatic repayments are queued by `loans:process-due-repayments`. Run the Laravel scheduler and a queue worker in each production environment:
+
+```bash
+php artisan schedule:work
+php artisan queue:work --tries=1
+```
+
+Due installments are charged with Paystack authorization codes, retried according to the configured maximum and delay, and finalized through verified Paystack webhooks. Disbursements create Paystack transfer recipients and remain `processing` until a successful transfer webhook activates the loan and creates its repayment schedule.
+
+Before production, configure live keys, webhook delivery over HTTPS, queue supervision, scheduler supervision, Paystack transfer capability, sufficient Paystack balance, and alerting for failed repayments and transfers. Test all flows with Paystack test mode and HTTP-faked automated tests before switching keys.
+
 If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
 
 ## License

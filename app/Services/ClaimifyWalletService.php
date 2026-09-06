@@ -8,12 +8,27 @@ use Illuminate\Support\Facades\Http;
 
 class ClaimifyWalletService
 {
-    private function client(): PendingRequest
+    protected function client(): PendingRequest
     {
-        return Http::baseUrl(rtrim(config('services.claimify_wallet.base_url'), '/'))
+        return Http::baseUrl(rtrim($this->baseUrl(), '/'))
             ->acceptJson()
-            ->withToken(config('services.claimify_wallet.token'))
-            ->timeout((int) config('services.claimify_wallet.timeout', 20));
+            ->withToken($this->token())
+            ->timeout($this->timeout());
+    }
+
+    protected function baseUrl(): string
+    {
+        return (string) config('services.claimify_wallet.base_url');
+    }
+
+    protected function token(): ?string
+    {
+        return config('services.claimify_wallet.token');
+    }
+
+    protected function timeout(): int
+    {
+        return (int) config('services.claimify_wallet.timeout', 20);
     }
 
     /** @throws RequestException */

@@ -21,6 +21,11 @@ class RepaymentSchedule extends Model
         'amount_paid',
         'balance_due',
         'status',
+        'paid_at',
+        'retry_count',
+        'last_attempt_at',
+        'next_attempt_at',
+        'failure_reason',
     ];
 
     protected $casts = [
@@ -31,6 +36,9 @@ class RepaymentSchedule extends Model
         'total_due' => 'decimal:2',
         'amount_paid' => 'decimal:2',
         'balance_due' => 'decimal:2',
+        'paid_at' => 'datetime',
+        'last_attempt_at' => 'datetime',
+        'next_attempt_at' => 'datetime',
     ];
 
     public function loan()

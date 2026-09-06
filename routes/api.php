@@ -16,6 +16,9 @@ use App\Http\Controllers\PartnerLoanApplicationController;
 use App\Http\Controllers\Users\AuthController;
 use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\WalletController;
+use App\Http\Controllers\PaystackBankController;
+use App\Http\Controllers\PaystackPaymentController;
+use App\Http\Controllers\PaystackWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -35,8 +38,6 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
 
     // Wallet routes must come before the {id} wildcard
     Route::get('wallet', [WalletController::class, 'show']);
-    Route::post('wallet/banks', [ClaimifyWalletController::class, 'banks']);
-    Route::post('wallet/name-inquiry', [ClaimifyWalletController::class, 'nameInquiry'])->middleware('throttle:30,1');
     Route::post('wallet/verification/initiate', [ClaimifyWalletController::class, 'initiateVerification'])->middleware('throttle:5,1');
     Route::post('wallet/verification/validate', [ClaimifyWalletController::class, 'validateVerification'])->middleware('throttle:10,1');
     Route::post('wallet/create-customer', [ClaimifyWalletController::class, 'createCustomer']);
@@ -44,6 +45,12 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('wallet/bank', [WalletController::class, 'updateBankDetails']);
     Route::post('wallet/deposit', [WalletController::class, 'deposit']);
     Route::post('wallet/withdraw', [WalletController::class, 'withdraw']);
+    Route::get('bank-account', [PaystackBankController::class, 'show']);
+    Route::post('bank-account', [PaystackBankController::class, 'store'])->middleware('throttle:10,1');
+    Route::post('payments/paystack/initialize-card', [PaystackPaymentController::class, 'initializeCard'])->middleware('throttle:5,1');
+    Route::get('payments/paystack/verify/{reference}', [PaystackPaymentController::class, 'verifyCard'])->middleware('throttle:10,1');
+    Route::get('payment-authorizations', [PaystackPaymentController::class, 'authorizations']);
+    Route::delete('payment-authorizations/{paymentAuthorization}', [PaystackPaymentController::class, 'revoke']);
 
     // Loan routes must come before the {id} wildcard
     Route::prefix('loans')->group(function () {
@@ -73,6 +80,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::post('loans/{id}/approve', [LoanController::class, 'approve']);
     Route::post('loans/{id}/reject', [LoanController::class, 'reject']);
     Route::post('loans/{id}/disburse', [LoanDisbursementController::class, 'disburse']);
+    Route::post('loans/{id}/disburse/confirm-otp', [LoanDisbursementController::class, 'confirmOtp']);
     Route::get('loan-disbursements', [LoanDisbursementController::class, 'index']);
     Route::get('loan-disbursements/history', [LoanDisbursementController::class, 'disbursedLoanHistory']);
     Route::get('loan-payments', [LoanPaymentController::class, 'adminIndex']);
@@ -88,6 +96,9 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::post('organisations/{id}/regenerate-key', [OrganisationController::class, 'regenerateKey']);
     Route::get('organisations/{id}/users', [OrganisationController::class, 'users']);
 });
+
+Route::get('paystack/banks', [PaystackBankController::class, 'index'])->middleware('throttle:30,1');
+Route::post('paystack/webhook', PaystackWebhookController::class);
 
 // Partner integration endpoint — secured by X-Partner-Key header
 Route::middleware('partner')->prefix('partner')->group(function () {

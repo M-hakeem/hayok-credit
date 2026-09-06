@@ -70,7 +70,7 @@ class LoanPaymentController extends Controller
         $request->validate([
             'payment_reference' => 'nullable|string|max:255',
             'amount_paid' => 'required|numeric|min:0.01',
-            'payment_method' => 'nullable|in:wallet,bank,external',
+            'payment_method' => 'nullable|in:wallet',
         ]);
 
         $user = auth()->user();
@@ -104,6 +104,12 @@ class LoanPaymentController extends Controller
         }
 
         $amountPaid = (float) $request->amount_paid;
+        if ($amountPaid > (float) $schedule->balance_due) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Payment amount cannot exceed the installment balance.',
+            ], 422);
+        }
         $newAmountPaid = round($schedule->amount_paid + $amountPaid, 2);
         $remainingDue = max(0, round($schedule->total_due - $newAmountPaid, 2));
         $scheduleStatus = $newAmountPaid >= $schedule->total_due ? 'paid' : 'partial';
