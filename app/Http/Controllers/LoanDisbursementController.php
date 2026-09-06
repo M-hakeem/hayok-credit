@@ -20,6 +20,8 @@ class LoanDisbursementController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        $disbursements->makeVisible('bank_account_number');
+
         return response()->json([
             'status' => 'success',
             'data' => $disbursements,
@@ -38,9 +40,14 @@ class LoanDisbursementController extends Controller
             ->orderBy('disbursed_at', 'desc')
             ->get();
 
+        $disbursements->makeVisible('bank_account_number');
+
         $history = $disbursements->groupBy('user_id')->map(function ($userDisbursements) {
+            $disbursement = $userDisbursements->first();
+
             return [
-                'user' => $userDisbursements->first()->user,
+                'user' => $disbursement->user,
+                'disbursement' => $disbursement,
                 'loans' => $userDisbursements->pluck('loan')->values(),
             ];
         })->values();
@@ -231,7 +238,7 @@ class LoanDisbursementController extends Controller
             'bank_account_name'   => $disbursement->bank_account_name,
             'bank_account_number' => $disbursement->bank_account_number,
             'amount_requested'    => (float) $loan->amount_requested,
-            'transfer_reference'  => $disbursement->transaction_reference,
+            'transfer_reference'  => $disbursement->provider_reference,
         ];
 
         Log::info('Insucare: sending subscription update', [
