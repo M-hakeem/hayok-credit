@@ -73,6 +73,7 @@ Route::middleware('auth:sanctum')->get('loan-interest', [LoanInterestSettingCont
 
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
+    Route::get('users/{id}/wallet', [UserController::class, 'wallet']);
     Route::get('business-loan-applications', [BusinessLoanApplicationController::class, 'index']);
     Route::get('business-loan-applications/{businessLoanApplication}', [BusinessLoanApplicationController::class, 'show']);
     Route::post('loan-interest', [LoanInterestSettingController::class, 'store']);

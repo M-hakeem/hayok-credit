@@ -68,6 +68,40 @@ class UserController extends Controller
     }
 
     /**
+     * Display a user's wallet for administrators.
+     */
+    public function wallet(string $id)
+    {
+        $user = User::find($id);
+
+        if (! $user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        $wallet = $user->wallet;
+
+        if (! $wallet) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Wallet not found for this user.',
+            ], 404);
+        }
+
+        $wallet->load('transactions');
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'user' => $user->only(['id', 'fullname', 'email', 'phone_number']),
+                'wallet' => $wallet,
+            ],
+        ]);
+    }
+
+    /**
      * Show the form for editing the specified resource.
      */
     public function edit(string $id)
