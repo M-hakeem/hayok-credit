@@ -10,6 +10,22 @@ use Tests\TestCase;
 
 class UserProfileImageTest extends TestCase
 {
+    public function test_user_list_includes_the_full_bank_account_number(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        User::factory()->create([
+            'bank_account_number' => '0123456789',
+        ]);
+
+        Sanctum::actingAs($admin, ['*']);
+
+        $response = $this->getJson('/api/user');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.bank_account_number', '0123456789');
+    }
+
     public function test_user_can_upload_a_profile_image_during_profile_update(): void
     {
         Storage::fake('public');
