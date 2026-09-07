@@ -168,4 +168,147 @@ class WalletController extends Controller
             ],
         ]);
     }
+
+    public function transactions(Request $request)
+    {
+        $request->validate([
+            'type' => 'nullable|in:credit,debit',
+            'limit' => 'nullable|integer|min:1|max:100',
+            'offset' => 'nullable|integer|min:0',
+        ]);
+
+        $user = auth()->user();
+        $wallet = $user->wallet;
+
+        if (! $wallet) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Wallet not found. Verify your NIN or BVN and create a wallet first.',
+            ], 404);
+        }
+
+        $query = $wallet->transactions();
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        $limit = (int) ($request->limit ?? 20);
+        $offset = (int) ($request->offset ?? 0);
+
+        $transactions = $query->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->offset($offset)
+            ->get();
+
+        $total = $wallet->transactions()->count();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'transactions' => $transactions,
+                'pagination' => [
+                    'total' => $total,
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'has_more' => ($offset + $limit) < $total,
+                ],
+            ],
+        ]);
+    }
+
+    public function withdrawals(Request $request)
+    {
+        $request->validate([
+            'status' => 'nullable|in:pending,processing,completed,failed,cancelled',
+            'limit' => 'nullable|integer|min:1|max:100',
+            'offset' => 'nullable|integer|min:0',
+        ]);
+
+        $user = auth()->user();
+
+        $query = Withdrawal::where('user_id', $user->id);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $limit = (int) ($request->limit ?? 20);
+        $offset = (int) ($request->offset ?? 0);
+
+        $withdrawals = $query->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->offset($offset)
+            ->get();
+
+        $total = Withdrawal::where('user_id', $user->id)->count();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'withdrawals' => $withdrawals,
+                'pagination' => [
+                    'total' => $total,
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'has_more' => ($offset + $limit) < $total,
+                ],
+            ],
+        ]);
+    }
+
+    public function paymentMethods()
+    {
+        $user = auth()->user();
+        $wallet = $user->wallet;
+
+        $methods = [];
+
+        // Add wallet if it exists
+        if ($wallet) {
+            $methods[] = [
+                'type' => 'wallet',
+                'balance' => $wallet->balance,
+                'status' => $wallet->status,
+                'currency' => $wallet->currency ?? 'NGN',
+                'available' => (float) $wallet->balance > 0,
+            ];
+        }
+
+        // Add saved card authorizations
+        $cards = $user->paymentAuthorizations()
+            ->where('status', 'active')
+            ->where('reusable', true)
+            ->get()
+            ->map(function ($auth) {
+                return [
+                    'type' => 'card',
+                    'id' => $auth->id,
+                    'brand' => $auth->brand,
+                    'last4' => $auth->last4,
+                    'exp_month' => $auth->exp_month,
+                    'exp_year' => $auth->exp_year,
+                    'status' => $auth->status,
+                    'available' => $auth->isUsable(),
+                ];
+            });
+
+        $methods = array_merge($methods, $cards->all());
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'payment_methods' => $methods,
+                'has_wallet' => (bool) $wallet,
+                'has_card' => $cards->count() > 0,
+                'bank_details' => [
+                    'bank_name' => $user->bank_name,
+                    'bank_account_number' => $user->bank_account_number ? '********'.substr($user->bank_account_number, -4) : null,
+                    'bank_account_name' => $user->bank_account_name,
+                    'bank_code' => $user->bank_code,
+                    'bank_connected_at' => $user->bank_connected_at,
+                ],
+            ],
+        ]);
+    }
 }
