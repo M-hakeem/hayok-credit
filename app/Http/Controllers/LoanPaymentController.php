@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Loan;
 use App\Models\LoanPayment;
 use App\Models\RepaymentSchedule;
+use App\Services\PaymentService;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Http\Request;
 
@@ -64,13 +65,13 @@ class LoanPaymentController extends Controller
 
     #[BodyParameter('amount_paid', type: 'number', required: true, description: 'Amount being paid for this installment (min 0.01)')]
     #[BodyParameter('payment_reference', type: 'string', required: false, description: 'Payment reference string (max 255 chars)')]
-    #[BodyParameter('payment_method', type: 'string', required: false, description: 'Payment method: wallet, bank, or external')]
-    public function store(Request $request, $loanId)
+    #[BodyParameter('payment_method', type: 'string', required: false, description: 'Payment method: wallet or card (defaults to auto-select: wallet first, then card)')]
+    public function store(Request $request, $loanId, PaymentService $paymentService)
     {
         $request->validate([
             'payment_reference' => 'nullable|string|max:255',
             'amount_paid' => 'required|numeric|min:0.01',
-            'payment_method' => 'nullable|in:wallet',
+            'payment_method' => 'nullable|in:wallet,card,auto',
         ]);
 
         $user = auth()->user();
@@ -103,69 +104,24 @@ class LoanPaymentController extends Controller
             ], 404);
         }
 
-        $amountPaid = (float) $request->amount_paid;
-        if ($amountPaid > (float) $schedule->balance_due) {
+        try {
+            $payment = $paymentService->processLoanPayment(
+                $user,
+                $schedule,
+                (float) $request->amount_paid,
+                $request->payment_reference,
+            );
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Installment paid successfully.',
+                'data' => $payment,
+            ]);
+        } catch (\Exception $exception) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Payment amount cannot exceed the installment balance.',
+                'message' => $exception->getMessage(),
             ], 422);
         }
-        $newAmountPaid = round($schedule->amount_paid + $amountPaid, 2);
-        $remainingDue = max(0, round($schedule->total_due - $newAmountPaid, 2));
-        $scheduleStatus = $newAmountPaid >= $schedule->total_due ? 'paid' : 'partial';
-
-        if ($request->payment_method === 'wallet') {
-            $wallet = $user->wallet;
-
-            if (! $wallet) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Wallet not found. Verify your NIN or BVN and create a wallet first.',
-                ], 404);
-            }
-
-            try {
-                $wallet->debit(
-                    (float) $request->amount_paid,
-                    'Loan repayment',
-                    $request->payment_reference,
-                );
-            } catch (\RuntimeException $exception) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => $exception->getMessage(),
-                ], 422);
-            }
-        }
-
-        $payment = LoanPayment::create([
-            'loan_id' => $loan->id,
-            'repayment_schedule_id' => $schedule->id,
-            'user_id' => $user->id,
-            'due_date' => $schedule->due_date,
-            'amount_due' => $schedule->total_due,
-            'amount_paid' => $amountPaid,
-            'paid_at' => now(),
-            'status' => $scheduleStatus === 'paid' ? 'paid' : 'partial',
-            'payment_reference' => $request->payment_reference,
-        ]);
-
-        $schedule->update([
-            'amount_paid' => $newAmountPaid,
-            'balance_due' => $remainingDue,
-            'status' => $scheduleStatus,
-        ]);
-
-        if ($loan->repaymentSchedules()->whereIn('status', ['pending', 'partial'])->count() === 0) {
-            $loan->update(['status' => 'completed']);
-        } else {
-            $loan->update(['status' => 'active']);
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Installment paid successfully.',
-            'data' => $payment,
-        ]);
     }
 }

@@ -38,6 +38,9 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
 
     // Wallet routes must come before the {id} wildcard
     Route::get('wallet', [WalletController::class, 'show']);
+    Route::get('wallet/transactions', [WalletController::class, 'transactions']);
+    Route::get('wallet/withdrawals', [WalletController::class, 'withdrawals']);
+    Route::get('wallet/payment-methods', [WalletController::class, 'paymentMethods']);
     Route::post('wallet/verification/initiate', [ClaimifyWalletController::class, 'initiateVerification'])->middleware('throttle:5,1');
     Route::post('wallet/verification/validate', [ClaimifyWalletController::class, 'validateVerification'])->middleware('throttle:10,1');
     Route::post('wallet/create-customer', [ClaimifyWalletController::class, 'createCustomer']);
