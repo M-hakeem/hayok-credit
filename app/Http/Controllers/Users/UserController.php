@@ -17,6 +17,12 @@ class UserController extends Controller
     public function index()
     {
         $users = User::where('role', '!=', 'admin')->orderBy('created_at', 'DESC')->get();
+        $users = $users->map(function (User $user) {
+            $data = $user->toArray();
+            $data['bank_account_number'] = $user->bank_account_number;
+
+            return $data;
+        });
 
         return response()->json([
             'status' => 'success',
