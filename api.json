@@ -3723,6 +3723,120 @@
                 ]
             }
         },
+        "/admin/loans/{id}/disburse/confirm-otp": {
+            "post": {
+                "operationId": "loanDisbursement.confirmOtp",
+                "tags": [
+                    "LoanDisbursement"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "otp": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "otp"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Paystack transfer OTP accepted. Awaiting transfer confirmation."
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "disbursement": {
+                                                    "type": "string"
+                                                },
+                                                "transfer": {
+                                                    "type": "array",
+                                                    "items": {}
+                                                }
+                                            },
+                                            "required": [
+                                                "disbursement",
+                                                "transfer"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "No disbursement record found for this loan."
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/admin/loan-disbursements": {
             "get": {
                 "operationId": "loanDisbursement.index",
@@ -4166,7 +4280,7 @@
                                     },
                                     "payment_method": {
                                         "type": "string",
-                                        "description": "Payment method: wallet, bank, or external"
+                                        "description": "Payment method: wallet or card (defaults to auto-select: wallet first, then card)"
                                     }
                                 },
                                 "required": [
@@ -4177,6 +4291,9 @@
                     }
                 },
                 "responses": {
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
                     "200": {
                         "description": "",
                         "content": {
@@ -4205,32 +4322,12 @@
                             }
                         }
                     },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
-                    },
                     "404": {
                         "description": "",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "anyOf": [
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "status": {
-                                                    "type": "string",
-                                                    "const": "error"
-                                                },
-                                                "message": {
-                                                    "type": "string",
-                                                    "const": "Wallet not found. Verify your NIN or BVN and create a wallet first."
-                                                }
-                                            },
-                                            "required": [
-                                                "status",
-                                                "message"
-                                            ]
-                                        },
                                         {
                                             "type": "object",
                                             "properties": {
@@ -5645,7 +5742,191 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/components/schemas/User"
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "organisation_id": {
+                                                        "type": [
+                                                            "integer",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "fullname": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "dob": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "gender": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "email": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "residential_address": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "state": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "lga": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "nin": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "bvn": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "phone_number": {
+                                                        "type": "string"
+                                                    },
+                                                    "profile_image": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "bank_name": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "bank_account_name": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "bank_code": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "bank_connected_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ],
+                                                        "format": "date-time"
+                                                    },
+                                                    "phone_verified_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ],
+                                                        "format": "date-time"
+                                                    },
+                                                    "status": {
+                                                        "type": "string"
+                                                    },
+                                                    "kyc_status": {
+                                                        "type": "string"
+                                                    },
+                                                    "account_level": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "is_blacklisted": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "role": {
+                                                        "type": "string"
+                                                    },
+                                                    "created_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ],
+                                                        "format": "date-time"
+                                                    },
+                                                    "updated_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ],
+                                                        "format": "date-time"
+                                                    },
+                                                    "deleted_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ],
+                                                        "format": "date-time"
+                                                    },
+                                                    "profile_image_url": {
+                                                        "type": "string"
+                                                    },
+                                                    "bank_account_number": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "organisation_id",
+                                                    "fullname",
+                                                    "dob",
+                                                    "gender",
+                                                    "email",
+                                                    "residential_address",
+                                                    "state",
+                                                    "lga",
+                                                    "nin",
+                                                    "bvn",
+                                                    "phone_number",
+                                                    "profile_image",
+                                                    "bank_name",
+                                                    "bank_account_name",
+                                                    "bank_code",
+                                                    "bank_connected_at",
+                                                    "phone_verified_at",
+                                                    "status",
+                                                    "kyc_status",
+                                                    "account_level",
+                                                    "is_blacklisted",
+                                                    "role",
+                                                    "created_at",
+                                                    "updated_at",
+                                                    "deleted_at",
+                                                    "profile_image_url",
+                                                    "bank_account_number"
+                                                ]
                                             }
                                         }
                                     },
@@ -5669,9 +5950,8 @@
             }
         },
         "/user/update-profile": {
-            "put": {
+            "post": {
                 "operationId": "user.update",
-                "summary": "Update the specified resource in storage",
                 "tags": [
                     "User"
                 ],
@@ -5693,21 +5973,47 @@
                                     "type": "object",
                                     "properties": {
                                         "status": {
-                                            "type": "string",
-                                            "const": "success"
+                                            "type": "string"
                                         },
                                         "message": {
-                                            "type": "string",
-                                            "const": "Profile updated successfully"
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/User"
                                         },
                                         "user": {
-                                            "type": "string"
+                                            "$ref": "#/components/schemas/User"
+                                        },
+                                        "hint": {
+                                            "type": "object",
+                                            "properties": {
+                                                "address_management": {
+                                                    "type": "string"
+                                                },
+                                                "employment_info": {
+                                                    "type": "string"
+                                                },
+                                                "guarantor_info": {
+                                                    "type": "string"
+                                                },
+                                                "nin_verification": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "address_management",
+                                                "employment_info",
+                                                "guarantor_info",
+                                                "nin_verification"
+                                            ]
                                         }
                                     },
                                     "required": [
                                         "status",
                                         "message",
-                                        "user"
+                                        "data",
+                                        "user",
+                                        "hint"
                                     ]
                                 }
                             }
@@ -5718,6 +6024,414 @@
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/user/profile-management-guide": {
+            "get": {
+                "operationId": "user.profileManagementGuide",
+                "summary": "Get profile management endpoints guide\r\n\r\nThis endpoint returns information about all available profile management endpoints\r\nto help clients understand which endpoint to use for different profile updates",
+                "tags": [
+                    "User"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Profile management endpoints guide"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "basic_profile": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "endpoint": {
+                                                            "type": "string",
+                                                            "const": "POST /api/user/update-profile"
+                                                        },
+                                                        "description": {
+                                                            "type": "string",
+                                                            "const": "Update basic profile information. Use multipart/form-data and POST when uploading profile_image; PUT is supported for JSON-only edits."
+                                                        },
+                                                        "fields": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "fullname": {
+                                                                    "type": "string",
+                                                                    "const": "Full name (string, max 255)"
+                                                                },
+                                                                "dob": {
+                                                                    "type": "string",
+                                                                    "const": "Date of birth (date)"
+                                                                },
+                                                                "gender": {
+                                                                    "type": "string",
+                                                                    "const": "Gender (male, female, other)"
+                                                                },
+                                                                "email": {
+                                                                    "type": "string",
+                                                                    "const": "Email address (email, unique)"
+                                                                },
+                                                                "phone_number": {
+                                                                    "type": "string",
+                                                                    "const": "Phone number (string, 10-20 chars)"
+                                                                },
+                                                                "profile_image": {
+                                                                    "type": "string",
+                                                                    "const": "Profile picture (image, jpg/jpeg/png/webp, max 2MB)"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "fullname",
+                                                                "dob",
+                                                                "gender",
+                                                                "email",
+                                                                "phone_number",
+                                                                "profile_image"
+                                                            ]
+                                                        },
+                                                        "example": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "fullname": {
+                                                                    "type": "string",
+                                                                    "const": "John Doe"
+                                                                },
+                                                                "email": {
+                                                                    "type": "string",
+                                                                    "const": "john@example.com"
+                                                                },
+                                                                "phone_number": {
+                                                                    "type": "string",
+                                                                    "const": "08012345678"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "fullname",
+                                                                "email",
+                                                                "phone_number"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "endpoint",
+                                                        "description",
+                                                        "fields",
+                                                        "example"
+                                                    ]
+                                                },
+                                                "address_management": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "endpoints": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "GET /api/address": {
+                                                                    "type": "string",
+                                                                    "const": "Get all addresses"
+                                                                },
+                                                                "POST /api/address": {
+                                                                    "type": "string",
+                                                                    "const": "Add new address"
+                                                                },
+                                                                "PUT /api/address/{id}": {
+                                                                    "type": "string",
+                                                                    "const": "Update address"
+                                                                },
+                                                                "DELETE /api/address/{id}": {
+                                                                    "type": "string",
+                                                                    "const": "Delete address"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "GET /api/address",
+                                                                "POST /api/address",
+                                                                "PUT /api/address/{id}",
+                                                                "DELETE /api/address/{id}"
+                                                            ]
+                                                        },
+                                                        "description": {
+                                                            "type": "string",
+                                                            "const": "Manage residential addresses with verification status"
+                                                        },
+                                                        "fields": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "residential_address": {
+                                                                    "type": "string",
+                                                                    "const": "Full address (string)"
+                                                                },
+                                                                "state": {
+                                                                    "type": "string",
+                                                                    "const": "State of residence (string)"
+                                                                },
+                                                                "lga": {
+                                                                    "type": "string",
+                                                                    "const": "Local Government Area (string)"
+                                                                },
+                                                                "utility_bill": {
+                                                                    "type": "string",
+                                                                    "const": "Utility bill document (file)"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "residential_address",
+                                                                "state",
+                                                                "lga",
+                                                                "utility_bill"
+                                                            ]
+                                                        },
+                                                        "verification_status": {
+                                                            "type": "string",
+                                                            "const": "pending|verified|rejected"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "endpoints",
+                                                        "description",
+                                                        "fields",
+                                                        "verification_status"
+                                                    ]
+                                                },
+                                                "employment_management": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "endpoints": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "GET /api/employment": {
+                                                                    "type": "string",
+                                                                    "const": "Get all employment records"
+                                                                },
+                                                                "POST /api/employment": {
+                                                                    "type": "string",
+                                                                    "const": "Add employment information"
+                                                                },
+                                                                "PUT /api/employment/{id}": {
+                                                                    "type": "string",
+                                                                    "const": "Update employment"
+                                                                },
+                                                                "DELETE /api/employment/{id}": {
+                                                                    "type": "string",
+                                                                    "const": "Delete employment"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "GET /api/employment",
+                                                                "POST /api/employment",
+                                                                "PUT /api/employment/{id}",
+                                                                "DELETE /api/employment/{id}"
+                                                            ]
+                                                        },
+                                                        "description": {
+                                                            "type": "string",
+                                                            "const": "Manage employment and income details"
+                                                        },
+                                                        "fields": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "employment_information": {
+                                                                    "type": "string",
+                                                                    "const": "Employer details"
+                                                                },
+                                                                "occupation": {
+                                                                    "type": "string",
+                                                                    "const": "Job title/occupation"
+                                                                },
+                                                                "educational_details": {
+                                                                    "type": "string",
+                                                                    "const": "Education background"
+                                                                },
+                                                                "income": {
+                                                                    "type": "string",
+                                                                    "const": "Monthly/annual income"
+                                                                },
+                                                                "bank_statement": {
+                                                                    "type": "string",
+                                                                    "const": "Bank statement document (file)"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "employment_information",
+                                                                "occupation",
+                                                                "educational_details",
+                                                                "income",
+                                                                "bank_statement"
+                                                            ]
+                                                        },
+                                                        "verification_status": {
+                                                            "type": "string",
+                                                            "const": "pending|verified|rejected"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "endpoints",
+                                                        "description",
+                                                        "fields",
+                                                        "verification_status"
+                                                    ]
+                                                },
+                                                "guarantor_management": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "endpoints": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "GET /api/guarantor": {
+                                                                    "type": "string",
+                                                                    "const": "Get all guarantors"
+                                                                },
+                                                                "POST /api/guarantor": {
+                                                                    "type": "string",
+                                                                    "const": "Add guarantor"
+                                                                },
+                                                                "PUT /api/guarantor/{id}": {
+                                                                    "type": "string",
+                                                                    "const": "Update guarantor"
+                                                                },
+                                                                "DELETE /api/guarantor/{id}": {
+                                                                    "type": "string",
+                                                                    "const": "Delete guarantor"
+                                                                },
+                                                                "POST /api/guarantor/{id}/id-document": {
+                                                                    "type": "string",
+                                                                    "const": "Upload guarantor ID document"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "GET /api/guarantor",
+                                                                "POST /api/guarantor",
+                                                                "PUT /api/guarantor/{id}",
+                                                                "DELETE /api/guarantor/{id}",
+                                                                "POST /api/guarantor/{id}/id-document"
+                                                            ]
+                                                        },
+                                                        "description": {
+                                                            "type": "string",
+                                                            "const": "Manage personal and professional guarantors"
+                                                        },
+                                                        "fields": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "guarantor_type": {
+                                                                    "type": "string",
+                                                                    "const": "personal|professional"
+                                                                },
+                                                                "relationship": {
+                                                                    "type": "string",
+                                                                    "const": "Relationship to applicant"
+                                                                },
+                                                                "name": {
+                                                                    "type": "string",
+                                                                    "const": "Guarantor name"
+                                                                },
+                                                                "phone_number": {
+                                                                    "type": "string",
+                                                                    "const": "Guarantor phone"
+                                                                },
+                                                                "id_type": {
+                                                                    "type": "string",
+                                                                    "const": "Type of ID"
+                                                                },
+                                                                "id_file": {
+                                                                    "type": "string",
+                                                                    "const": "ID document (file)"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "guarantor_type",
+                                                                "relationship",
+                                                                "name",
+                                                                "phone_number",
+                                                                "id_type",
+                                                                "id_file"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "endpoints",
+                                                        "description",
+                                                        "fields"
+                                                    ]
+                                                },
+                                                "nin_bvn_verification": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "endpoints": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "POST /api/wallet/first-central/consumer-match": {
+                                                                    "type": "string",
+                                                                    "const": "Verify NIN/BVN via First Central"
+                                                                },
+                                                                "POST /api/wallet/verification/initiate": {
+                                                                    "type": "string",
+                                                                    "const": "Initiate wallet verification"
+                                                                },
+                                                                "POST /api/wallet/verification/validate": {
+                                                                    "type": "string",
+                                                                    "const": "Validate wallet verification"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "POST /api/wallet/first-central/consumer-match",
+                                                                "POST /api/wallet/verification/initiate",
+                                                                "POST /api/wallet/verification/validate"
+                                                            ]
+                                                        },
+                                                        "description": {
+                                                            "type": "string",
+                                                            "const": "Verify NIN and BVN for KYC compliance"
+                                                        },
+                                                        "note": {
+                                                            "type": "string",
+                                                            "const": "NIN and BVN are verified through wallet KYC endpoints, not through profile update"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "endpoints",
+                                                        "description",
+                                                        "note"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "basic_profile",
+                                                "address_management",
+                                                "employment_management",
+                                                "guarantor_management",
+                                                "nin_bvn_verification"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
                     }
                 },
                 "security": [
@@ -5847,6 +6561,115 @@
                                         "status",
                                         "message",
                                         "user"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/users/{id}/wallet": {
+            "get": {
+                "operationId": "user.wallet",
+                "summary": "Display a user's wallet for administrators",
+                "tags": [
+                    "User"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "user": {
+                                                    "type": "string"
+                                                },
+                                                "wallet": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "user",
+                                                "wallet"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "const": "error"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Wallet not found for this user."
+                                                }
+                                            },
+                                            "required": [
+                                                "status",
+                                                "message"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "const": "error"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "User not found"
+                                                }
+                                            },
+                                            "required": [
+                                                "status",
+                                                "message"
+                                            ]
+                                        }
                                     ]
                                 }
                             }
@@ -6051,6 +6874,356 @@
                                     "required": [
                                         "status",
                                         "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/user/wallet/transactions": {
+            "get": {
+                "operationId": "wallet.transactions",
+                "tags": [
+                    "Wallet"
+                ],
+                "parameters": [
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "credit",
+                                "debit"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "transactions": {
+                                                    "type": "string"
+                                                },
+                                                "pagination": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "total": {
+                                                            "type": "string"
+                                                        },
+                                                        "limit": {
+                                                            "type": "integer"
+                                                        },
+                                                        "offset": {
+                                                            "type": "integer"
+                                                        },
+                                                        "has_more": {
+                                                            "type": "boolean"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "total",
+                                                        "limit",
+                                                        "offset",
+                                                        "has_more"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "transactions",
+                                                "pagination"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Wallet not found. Verify your NIN or BVN and create a wallet first."
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/user/wallet/withdrawals": {
+            "get": {
+                "operationId": "wallet.withdrawals",
+                "tags": [
+                    "Wallet"
+                ],
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "pending",
+                                "processing",
+                                "completed",
+                                "failed",
+                                "cancelled"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "withdrawals": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/Withdrawal"
+                                                    }
+                                                },
+                                                "pagination": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "total": {
+                                                            "type": "integer",
+                                                            "minimum": 0
+                                                        },
+                                                        "limit": {
+                                                            "type": "integer"
+                                                        },
+                                                        "offset": {
+                                                            "type": "integer"
+                                                        },
+                                                        "has_more": {
+                                                            "type": "boolean"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "total",
+                                                        "limit",
+                                                        "offset",
+                                                        "has_more"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "withdrawals",
+                                                "pagination"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/user/wallet/payment-methods": {
+            "get": {
+                "operationId": "wallet.paymentMethods",
+                "tags": [
+                    "Wallet"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "payment_methods": {
+                                                    "type": "array",
+                                                    "items": {}
+                                                },
+                                                "has_wallet": {
+                                                    "type": "boolean"
+                                                },
+                                                "has_card": {
+                                                    "type": "boolean"
+                                                },
+                                                "bank_details": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "bank_name": {
+                                                            "type": "string"
+                                                        },
+                                                        "bank_account_number": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "bank_account_name": {
+                                                            "type": "string"
+                                                        },
+                                                        "bank_code": {
+                                                            "type": "string"
+                                                        },
+                                                        "bank_connected_at": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "bank_name",
+                                                        "bank_account_number",
+                                                        "bank_account_name",
+                                                        "bank_code",
+                                                        "bank_connected_at"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "payment_methods",
+                                                "has_wallet",
+                                                "has_card",
+                                                "bank_details"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "data"
                                     ]
                                 }
                             }
@@ -7106,12 +8279,6 @@
                     "status": {
                         "type": "string"
                     },
-                    "transaction_reference": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
                     "disbursed_at": {
                         "type": [
                             "string",
@@ -7194,7 +8361,6 @@
                     "bank_account_name",
                     "bank_code",
                     "status",
-                    "transaction_reference",
                     "disbursed_at",
                     "paystack_recipient_code",
                     "provider",
@@ -8423,30 +9589,10 @@
                         "format": "email",
                         "maxLength": 255
                     },
-                    "residential_address": {
+                    "phone_number": {
                         "type": "string",
                         "minLength": 10,
-                        "maxLength": 255
-                    },
-                    "state": {
-                        "type": "string",
-                        "minLength": 2,
-                        "maxLength": 50
-                    },
-                    "lga": {
-                        "type": "string",
-                        "minLength": 2,
-                        "maxLength": 50
-                    },
-                    "nin": {
-                        "type": "string",
-                        "minLength": 11,
-                        "maxLength": 11
-                    },
-                    "bvn": {
-                        "type": "string",
-                        "minLength": 11,
-                        "maxLength": 11
+                        "maxLength": 20
                     },
                     "profile_image": {
                         "type": "string",
@@ -8602,6 +9748,9 @@
                             "null"
                         ],
                         "format": "date-time"
+                    },
+                    "profile_image_url": {
+                        "type": "string"
                     }
                 },
                 "required": [
@@ -8630,7 +9779,8 @@
                     "role",
                     "created_at",
                     "updated_at",
-                    "deleted_at"
+                    "deleted_at",
+                    "profile_image_url"
                 ],
                 "title": "User"
             },

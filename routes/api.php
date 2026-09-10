@@ -34,7 +34,9 @@ Route::prefix('auth')->group(function () {
 
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::get('/', [UserController::class, 'index']);
-    Route::put('update-profile', [UserController::class, 'update']);
+    // Use POST so PHP reliably parses multipart profile-image uploads.
+    Route::post('update-profile', [UserController::class, 'update']);
+    Route::get('profile-management-guide', [UserController::class, 'profileManagementGuide']);
 
     // Wallet routes must come before the {id} wildcard
     Route::get('wallet', [WalletController::class, 'show']);

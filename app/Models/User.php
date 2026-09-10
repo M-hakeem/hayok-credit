@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Casts\Encrypted;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -58,6 +59,10 @@ class User extends Authenticatable
         'bank_account_number',
     ];
 
+    protected $appends = [
+        'profile_image_url',
+    ];
+
     /**
      * Get the attributes that should be cast.
      *
@@ -75,6 +80,13 @@ class User extends Authenticatable
             'bvn' => Encrypted::class,
             'bank_account_number' => Encrypted::class,
         ];
+    }
+
+    protected function profileImageUrl(): Attribute
+    {
+        return Attribute::get(fn () => $this->profile_image
+            ? asset('storage/'.$this->profile_image)
+            : null);
     }
 
     public function organisation()

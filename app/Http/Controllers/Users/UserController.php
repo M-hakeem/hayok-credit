@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Users;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateProfileRequest;
 use App\Models\User;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -109,9 +110,7 @@ class UserController extends Controller
         //
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
+    #[Response(type: 'array{status: string, message: string, data: User, user: User, hint: array{address_management: string, employment_info: string, guarantor_info: string, nin_verification: string}}')]
     public function update(UpdateProfileRequest $request)
     {
         $user = auth()->user();
@@ -128,11 +127,21 @@ class UserController extends Controller
         }
 
         $user->update($data);
+        $user = $user->fresh();
 
         return response()->json([
             'status' => 'success',
             'message' => 'Profile updated successfully',
-            'user' => $user->fresh()
+            // Keep `data` for the established API envelope and expose `user`
+            // for clients that consume profile-specific responses.
+            'data' => $user,
+            'user' => $user,
+            'hint' => [
+                'address_management' => 'Use POST/PUT /api/address to manage residential addresses',
+                'employment_info' => 'Use POST/PUT /api/employment to manage employment details',
+                'guarantor_info' => 'Use POST/PUT /api/guarantor to add/manage guarantors',
+                'nin_verification' => 'NIN/BVN verification is handled through wallet KYC endpoints',
+            ]
         ]);
     }
 
@@ -178,6 +187,99 @@ class UserController extends Controller
             'status' => 'success',
             'message' => 'User deleted successfully',
             'user' => $user
+        ]);
+    }
+
+    /**
+     * Get profile management endpoints guide
+     *
+     * This endpoint returns information about all available profile management endpoints
+     * to help clients understand which endpoint to use for different profile updates.
+     */
+    public function profileManagementGuide()
+    {
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profile management endpoints guide',
+            'data' => [
+                'basic_profile' => [
+                    'endpoint' => 'POST /api/user/update-profile',
+                    'description' => 'Update basic profile information. Use multipart/form-data and POST when uploading profile_image; PUT is supported for JSON-only edits.',
+                    'fields' => [
+                        'fullname' => 'Full name (string, max 255)',
+                        'dob' => 'Date of birth (date)',
+                        'gender' => 'Gender (male, female, other)',
+                        'email' => 'Email address (email, unique)',
+                        'phone_number' => 'Phone number (string, 10-20 chars)',
+                        'profile_image' => 'Profile picture (image, jpg/jpeg/png/webp, max 2MB)',
+                    ],
+                    'example' => [
+                        'fullname' => 'John Doe',
+                        'email' => 'john@example.com',
+                        'phone_number' => '08012345678',
+                    ]
+                ],
+                'address_management' => [
+                    'endpoints' => [
+                        'GET /api/address' => 'Get all addresses',
+                        'POST /api/address' => 'Add new address',
+                        'PUT /api/address/{id}' => 'Update address',
+                        'DELETE /api/address/{id}' => 'Delete address',
+                    ],
+                    'description' => 'Manage residential addresses with verification status',
+                    'fields' => [
+                        'residential_address' => 'Full address (string)',
+                        'state' => 'State of residence (string)',
+                        'lga' => 'Local Government Area (string)',
+                        'utility_bill' => 'Utility bill document (file)',
+                    ],
+                    'verification_status' => 'pending|verified|rejected'
+                ],
+                'employment_management' => [
+                    'endpoints' => [
+                        'GET /api/employment' => 'Get all employment records',
+                        'POST /api/employment' => 'Add employment information',
+                        'PUT /api/employment/{id}' => 'Update employment',
+                        'DELETE /api/employment/{id}' => 'Delete employment',
+                    ],
+                    'description' => 'Manage employment and income details',
+                    'fields' => [
+                        'employment_information' => 'Employer details',
+                        'occupation' => 'Job title/occupation',
+                        'educational_details' => 'Education background',
+                        'income' => 'Monthly/annual income',
+                        'bank_statement' => 'Bank statement document (file)',
+                    ],
+                    'verification_status' => 'pending|verified|rejected'
+                ],
+                'guarantor_management' => [
+                    'endpoints' => [
+                        'GET /api/guarantor' => 'Get all guarantors',
+                        'POST /api/guarantor' => 'Add guarantor',
+                        'PUT /api/guarantor/{id}' => 'Update guarantor',
+                        'DELETE /api/guarantor/{id}' => 'Delete guarantor',
+                        'POST /api/guarantor/{id}/id-document' => 'Upload guarantor ID document',
+                    ],
+                    'description' => 'Manage personal and professional guarantors',
+                    'fields' => [
+                        'guarantor_type' => 'personal|professional',
+                        'relationship' => 'Relationship to applicant',
+                        'name' => 'Guarantor name',
+                        'phone_number' => 'Guarantor phone',
+                        'id_type' => 'Type of ID',
+                        'id_file' => 'ID document (file)',
+                    ]
+                ],
+                'nin_bvn_verification' => [
+                    'endpoints' => [
+                        'POST /api/wallet/first-central/consumer-match' => 'Verify NIN/BVN via First Central',
+                        'POST /api/wallet/verification/initiate' => 'Initiate wallet verification',
+                        'POST /api/wallet/verification/validate' => 'Validate wallet verification',
+                    ],
+                    'description' => 'Verify NIN and BVN for KYC compliance',
+                    'note' => 'NIN and BVN are verified through wallet KYC endpoints, not through profile update'
+                ],
+            ]
         ]);
     }
 }

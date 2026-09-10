@@ -41,7 +41,7 @@ class UserProfileImageTest extends TestCase
 
         Sanctum::actingAs($user, ['*']);
 
-        $response = $this->putJson('/api/user/update-profile', [
+        $response = $this->post('/api/user/update-profile', [
             'fullname' => 'Jane Smith',
             'profile_image' => UploadedFile::fake()->image('avatar.jpg', 200, 200),
         ]);
@@ -50,8 +50,24 @@ class UserProfileImageTest extends TestCase
             ->assertOk()
             ->assertJsonPath('status', 'success')
             ->assertJsonPath('user.fullname', 'Jane Smith')
-            ->assertJsonPath('user.profile_image', fn ($value) => ! empty($value));
+            ->assertJsonPath('user.profile_image', fn ($value) => ! empty($value))
+            ->assertJsonPath('user.profile_image_url', fn ($value) => str_starts_with($value, 'http'));
 
         Storage::disk('public')->assertExists($user->fresh()->profile_image);
+    }
+
+    public function test_profile_update_rejects_a_request_with_no_supported_fields(): void
+    {
+        $user = User::factory()->create();
+
+        Sanctum::actingAs($user, ['*']);
+
+        $response = $this->postJson('/api/user/update-profile', [
+            'residential_address' => '12 Example Street, Ikeja',
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('profile');
     }
 }
