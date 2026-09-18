@@ -39,6 +39,22 @@ class PaystackPaymentController extends Controller
         ]);
     }
 
+    /**
+     * User card status.
+     */
+    public function cardStatus()
+    {
+        $hasCard = auth()->user()->paymentAuthorizations()
+            ->where('status', 'active')
+            ->where('reusable', true)
+            ->exists();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => ['has_card' => $hasCard],
+        ]);
+    }
+
     public function revoke(PaymentAuthorization $paymentAuthorization, PaymentAuthorizationService $service)
     {
         abort_unless($paymentAuthorization->user_id === auth()->id(), 404);

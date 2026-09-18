@@ -81,6 +81,31 @@ class PaystackCardAuthorizationTest extends TestCase
         $this->assertSame('AUTH_test', PaymentAuthorization::first()->authorization_code);
     }
 
+    public function test_card_status_reports_only_active_reusable_cards(): void
+    {
+        $user = $this->user();
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/user/payments/paystack/card-status')
+            ->assertOk()
+            ->assertJsonPath('data.has_card', false);
+
+        PaymentAuthorization::create([
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'authorization_code' => 'AUTH_active',
+            'authorization_code_hash' => hash('sha256', 'AUTH_active'),
+            'reusable' => true,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/user/payments/paystack/card-status')
+            ->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.has_card', true);
+    }
+
     public function test_invalid_webhook_signature_is_rejected(): void
     {
         config(['paystack.secret_key' => 'test-secret']);
