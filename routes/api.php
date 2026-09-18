@@ -54,6 +54,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('bank-account', [PaystackBankController::class, 'store'])->middleware('throttle:10,1');
     Route::post('payments/paystack/initialize-card', [PaystackPaymentController::class, 'initializeCard'])->middleware('throttle:5,1');
     Route::get('payments/paystack/verify/{reference}', [PaystackPaymentController::class, 'verifyCard'])->middleware('throttle:10,1');
+    Route::get('payments/paystack/card-status', [PaystackPaymentController::class, 'cardStatus']);
     Route::get('payment-authorizations', [PaystackPaymentController::class, 'authorizations']);
     Route::delete('payment-authorizations/{paymentAuthorization}', [PaystackPaymentController::class, 'revoke']);
 
