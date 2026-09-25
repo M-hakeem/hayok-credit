@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 
 class ClaimifyWalletService
 {
@@ -21,9 +22,39 @@ class ClaimifyWalletService
         return (string) config('services.claimify_wallet.base_url');
     }
 
-    protected function token(): ?string
+    protected function token(): string
     {
-        return config('services.claimify_wallet.token');
+        return Cache::remember('claimify_wallet.access_token', now()->addMinutes(50), function (): string {
+            $email = config('services.claimify_wallet.email');
+            $password = config('services.claimify_wallet.password');
+
+            if (! $email || ! $password) {
+                throw new \RuntimeException('Claimify wallet credentials are not configured.');
+            }
+
+            $response = Http::baseUrl(rtrim($this->baseUrl(), '/'))
+                ->acceptJson()
+                ->timeout($this->timeout())
+                ->post('/auth/login', ['email' => $email, 'password' => $password])
+                ->throw()
+                ->json();
+
+            $token = data_get($response, 'data.access_token')
+                ?? data_get($response, 'data.token')
+                ?? data_get($response, 'access_token')
+                ?? data_get($response, 'token');
+
+            if (! is_string($token) || $token === '') {
+                throw new \UnexpectedValueException('Claimify login response did not include an access token.');
+            }
+
+            $expiresIn = data_get($response, 'data.expires_in') ?? data_get($response, 'expires_in');
+            if (is_numeric($expiresIn) && (int) $expiresIn > 60) {
+                Cache::put('claimify_wallet.access_token', $token, now()->addSeconds((int) $expiresIn - 60));
+            }
+
+            return $token;
+        });
     }
 
     protected function timeout(): int

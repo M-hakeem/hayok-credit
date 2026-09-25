@@ -69,8 +69,7 @@ class UserController extends Controller
     }
 
     /**
-     * Return the authenticated user's NIN and BVN completion status.
-     * Identity numbers are intentionally never returned by this endpoint.
+     * Return the authenticated user's NIN and BVN status.
      */
     public function identityVerificationStatus(Request $request)
     {

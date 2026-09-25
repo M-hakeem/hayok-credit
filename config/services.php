@@ -46,7 +46,8 @@ return [
 
     'claimify_wallet' => [
         'base_url' => env('CLAIMIFY_WALLET_BASE_URL', 'https://claimify-api.hayokmedicare.ng/api/v1'),
-        'token' => env('CLAIMIFY_WALLET_TOKEN'),
+        'email' => env('CLAIMIFY_WALLET_EMAIL'),
+        'password' => env('CLAIMIFY_WALLET_PASSWORD'),
         'timeout' => env('CLAIMIFY_WALLET_TIMEOUT', 20),
     ],
 
