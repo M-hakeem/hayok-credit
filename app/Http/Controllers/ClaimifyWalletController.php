@@ -66,6 +66,10 @@ class ClaimifyWalletController extends Controller
             'type' => $data['type'],
         ], now()->addMinutes(30));
 
+        $request->user()->forceFill([
+            strtolower($data['type']).'_verified_at' => now(),
+        ])->save();
+
         return response()->json(['status' => 'success', 'data' => $response]);
     }
 

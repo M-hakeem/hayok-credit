@@ -69,6 +69,31 @@ class UserController extends Controller
     }
 
     /**
+     * Return the authenticated user's NIN and BVN completion status.
+     * Identity numbers are intentionally never returned by this endpoint.
+     */
+    public function identityVerificationStatus(Request $request)
+    {
+        $user = $request->user();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'nin' => [
+                    'added' => filled($user->nin),
+                    'verified' => $user->nin_verified_at !== null,
+                    'verified_at' => $user->nin_verified_at?->toISOString(),
+                ],
+                'bvn' => [
+                    'added' => filled($user->bvn),
+                    'verified' => $user->bvn_verified_at !== null,
+                    'verified_at' => $user->bvn_verified_at?->toISOString(),
+                ],
+            ],
+        ]);
+    }
+
+    /**
      * Display a user's wallet for administrators.
      */
     public function wallet(string $id)
