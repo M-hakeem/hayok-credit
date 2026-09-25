@@ -36,6 +36,11 @@ class ClaimifyWalletController extends Controller
             'number' => ['required', 'digits:11'],
         ]);
 
+        Cache::put($this->pendingIdentityKey($request), [
+            'type' => $data['type'],
+            'number' => $data['number'],
+        ], now()->addMinutes(30));
+
         return $this->call(fn () => $this->claimify->initiateVerification($data['type'], $data['number']));
     }
 
@@ -61,14 +66,26 @@ class ClaimifyWalletController extends Controller
             ], 422);
         }
 
+        $pendingIdentity = Cache::get($this->pendingIdentityKey($request));
+        if (! $pendingIdentity || $pendingIdentity['type'] !== $data['type']) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Your verification session expired. Please initiate verification again.',
+            ], 422);
+        }
+
+        $user = $request->user();
+        $column = strtolower($data['type']);
+        $user->forceFill([
+            $column => $pendingIdentity['number'],
+            $column.'_verified_at' => now(),
+        ])->save();
+
         Cache::put($this->verifiedIdentityKey($request), [
             'identity_id' => $data['identity_id'],
             'type' => $data['type'],
         ], now()->addMinutes(30));
-
-        $request->user()->forceFill([
-            strtolower($data['type']).'_verified_at' => now(),
-        ])->save();
+        Cache::forget($this->pendingIdentityKey($request));
 
         return response()->json(['status' => 'success', 'data' => $response]);
     }
@@ -149,6 +166,11 @@ class ClaimifyWalletController extends Controller
     private function verifiedIdentityKey(Request $request): string
     {
         return 'claimify:verified-identity:'.$request->user()->id;
+    }
+
+    private function pendingIdentityKey(Request $request): string
+    {
+        return 'claimify:pending-identity:'.$request->user()->id;
     }
 
     private function isFailedVerification(array $response): bool
