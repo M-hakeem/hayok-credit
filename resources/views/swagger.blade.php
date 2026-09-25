@@ -16,7 +16,8 @@
     <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
     <script>
         SwaggerUIBundle({
-            url: "{{ url('/api.json') }}",
+            // Scramble serves the generated OpenAPI document at this route.
+            url: "{{ url('/docs/api.json') }}",
             dom_id: '#swagger-ui',
             deepLinking: true,
             tryItOutEnabled: true,

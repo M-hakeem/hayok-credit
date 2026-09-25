@@ -78,6 +78,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'nin' => Encrypted::class,
             'bvn' => Encrypted::class,
+            'nin_verified_at' => 'datetime',
+            'bvn_verified_at' => 'datetime',
             'bank_account_number' => Encrypted::class,
         ];
     }
