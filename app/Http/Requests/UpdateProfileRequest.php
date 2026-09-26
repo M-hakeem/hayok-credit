@@ -19,7 +19,6 @@ class UpdateProfileRequest extends FormRequest
             'dob'           => 'sometimes|date',
             'gender'        => 'sometimes|string|in:male,female,other',
             'email'         => 'sometimes|email|max:255|unique:users,email,' . auth()->id(),
-            'phone_number'  => 'sometimes|string|min:10|max:20',
             'profile_image' => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:2048',
         ];
     }
