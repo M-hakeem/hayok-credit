@@ -59,10 +59,10 @@ class LoanController extends Controller
             ], 422);
         }
 
-        if (! $user->bank_name || ! $user->bank_account_number || ! $user->bank_account_name) {
+        if (! $user->wallet()->exists()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Please connect your bank account before applying for a loan.',
+                'message' => 'Please create a wallet before applying for a loan.',
             ], 422);
         }
 
@@ -184,9 +184,9 @@ class LoanController extends Controller
                 [
                     'user_id'             => $loan->user_id,
                     'amount'              => $loan->amount_requested,
-                    'bank_name'           => $loan->user->bank_name ?? '',
-                    'bank_account_number' => $loan->user->bank_account_number ?? '',
-                    'bank_account_name'   => $loan->user->bank_account_name ?? '',
+                    'bank_name'           => $loan->user->bank_name,
+                    'bank_account_number' => $loan->user->bank_account_number,
+                    'bank_account_name'   => $loan->user->bank_account_name,
                     'bank_code'           => $loan->user->bank_code,
                     'status'              => 'pending',
                 ]
