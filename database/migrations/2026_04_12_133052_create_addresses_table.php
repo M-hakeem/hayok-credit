@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('addresses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->text('residential_address');
-            $table->string('state');
-            $table->string('lga');
+            $table->text('residential_address')->nullable();
+            $table->string('state')->nullable();
+            $table->string('lga')->nullable();
             $table->string('utility_bill_path')->nullable();
             $table->enum('verification_status', ['pending', 'verified', 'rejected'])->default('pending');
             $table->text('rejection_reason')->nullable();

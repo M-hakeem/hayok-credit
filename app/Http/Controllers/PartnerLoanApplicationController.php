@@ -52,9 +52,6 @@ class PartnerLoanApplicationController extends Controller
                         'gender'              => $request->gender,
                         'nin'                 => $request->nin,
                         'bvn'                 => $request->bvn,
-                        'residential_address' => $request->residential_address,
-                        'state'               => $request->state,
-                        'lga'                 => $request->lga,
                         'bank_name'           => $request->bank_name,
                         'bank_account_number' => $request->bank_account_number,
                         'bank_account_name'   => $request->bank_account_name,
@@ -75,9 +72,6 @@ class PartnerLoanApplicationController extends Controller
                         'gender'              => $request->gender,
                         'nin'                 => $request->nin,
                         'bvn'                 => $request->bvn,
-                        'residential_address' => $request->residential_address,
-                        'state'               => $request->state,
-                        'lga'                 => $request->lga,
                         'bank_name'           => $request->bank_name,
                         'bank_account_number' => $request->bank_account_number,
                         'bank_account_name'   => $request->bank_account_name,
@@ -236,7 +230,7 @@ class PartnerLoanApplicationController extends Controller
             'data'   => [
                 'user'       => $user->only([
                     'id', 'fullname', 'phone_number', 'email', 'dob', 'gender',
-                    'nin', 'bvn', 'residential_address', 'state', 'lga',
+                    'nin', 'bvn',
                     'bank_name', 'bank_account_number', 'bank_account_name',
                     'kyc_status', 'account_level', 'status', 'organisation_id',
                 ]),
