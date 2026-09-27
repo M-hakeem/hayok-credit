@@ -16,9 +16,6 @@ return new class extends Migration
             $table->date('dob')->nullable()->change();
             $table->string('gender')->nullable()->change();
             $table->string('email')->nullable()->change();
-            $table->text('residential_address')->nullable()->change();
-            $table->string('state')->nullable()->change();
-            $table->string('lga')->nullable()->change();
             $table->string('nin')->nullable()->change();
             $table->string('bvn')->nullable()->change();
         });

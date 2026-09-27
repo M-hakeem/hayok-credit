@@ -34,8 +34,6 @@ class UserProfileImageTest extends TestCase
             'fullname' => 'Jane Doe',
             'email' => 'jane@example.com',
             'phone_number' => '+2348012345678',
-            'state' => 'Lagos',
-            'lga' => 'Ikeja',
             'password' => bcrypt('password123'),
         ]);
 

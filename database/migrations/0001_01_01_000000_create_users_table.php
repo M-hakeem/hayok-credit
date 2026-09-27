@@ -17,9 +17,6 @@ return new class extends Migration
             $table->date('dob');
             $table->string('gender');
             $table->string('email')->unique();
-            $table->text('residential_address');
-            $table->string('state');
-            $table->string('lga');
             $table->string('nin')->nullable();
             $table->string('bvn')->nullable();
             $table->string('phone_number');
