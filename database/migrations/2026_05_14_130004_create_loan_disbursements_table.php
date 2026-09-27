@@ -16,9 +16,9 @@ return new class extends Migration
             $table->foreignId('loan_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->decimal('amount', 12, 2);
-            $table->string('bank_name');
-            $table->string('bank_account_number');
-            $table->string('bank_account_name');
+            $table->string('bank_name')->nullable();
+            $table->string('bank_account_number')->nullable();
+            $table->string('bank_account_name')->nullable();
             $table->string('bank_code')->nullable();
             $table->string('status')->default('pending');
             $table->string('transaction_reference')->nullable();
