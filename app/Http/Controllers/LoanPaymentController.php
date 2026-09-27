@@ -65,7 +65,7 @@ class LoanPaymentController extends Controller
 
     #[BodyParameter('amount_paid', type: 'number', required: true, description: 'Amount being paid for this installment (min 0.01)')]
     #[BodyParameter('payment_reference', type: 'string', required: false, description: 'Payment reference string (max 255 chars)')]
-    #[BodyParameter('payment_method', type: 'string', required: false, description: 'Payment method: wallet or card (defaults to auto-select: wallet first, then card)')]
+    #[BodyParameter('payment_method', type: 'string', required: false, description: 'Uses the wallet first, then a saved card for any remaining amount.')]
     public function store(Request $request, $loanId, PaymentService $paymentService)
     {
         $request->validate([
@@ -114,7 +114,9 @@ class LoanPaymentController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Installment paid successfully.',
+                'message' => $payment->status === 'pending'
+                    ? 'Wallet portion applied. Card payment is awaiting Paystack confirmation.'
+                    : 'Installment paid successfully.',
                 'data' => $payment,
             ]);
         } catch (\Exception $exception) {
