@@ -14,7 +14,7 @@ class DashboardController extends Controller
         return response()->json([
             'status' => 'success',
             'data' => [
-                'total_users' => User::count(),
+                'total_users' => User::where('role', '!=', 'admin')->count(),
                 'active_partners' => Organisation::where('status', 'active')->count(),
                 'total_loans' => Loan::count(),
                 'active_loans' => Loan::where('status', 'active')->count(),
