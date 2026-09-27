@@ -95,7 +95,7 @@ class PaystackWebhookService
 
             $payment->update([
                 'status' => 'paid',
-                'amount_paid' => $payment->amount_due,
+                'amount_paid' => round((float) $payment->amount_paid + ((int) $payment->amount_minor / 100), 2),
                 'paid_at' => now(),
                 'provider_transaction_id' => (string) ($verified['id'] ?? $data['id'] ?? ''),
                 'gateway_response' => $verified,
@@ -111,7 +111,14 @@ class PaystackWebhookService
                     'balance_due' => $balanceDue,
                     'status' => $balanceDue > 0 ? 'partial' : 'paid',
                     'paid_at' => $balanceDue > 0 ? null : now(),
+                    'failure_reason' => null,
+                    'next_attempt_at' => null,
                 ]);
+                if ($balanceDue === 0.0 && $schedule->loan()->whereDoesntHave('repaymentSchedules', function ($query) {
+                    $query->whereIn('status', ['pending', 'partial']);
+                })->exists()) {
+                    $schedule->loan->update(['status' => 'completed']);
+                }
             }
         }
     }

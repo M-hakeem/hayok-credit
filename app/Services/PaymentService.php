@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\LoanPayment;
 use App\Models\RepaymentSchedule;
 use App\Models\User;
-use App\Models\Wallet;
 use App\Services\Paystack\RepaymentService;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -17,7 +16,7 @@ class PaymentService
     }
 
     /**
-     * Process loan payment with smart routing: wallet first, then card
+     * Process a loan payment from the user's wallet.
      *
      * @param  User  $user
      * @param  RepaymentSchedule  $schedule
@@ -40,62 +39,42 @@ class PaymentService
                 throw new \RuntimeException('Payment amount cannot exceed the installment balance.');
             }
 
-            $paymentMethod = null;
-            $paymentAuthorizationId = null;
-            $gatewayResponse = null;
-
-            // Try wallet payment first
             $wallet = $user->wallet;
-            if ($wallet && (float) $wallet->balance >= $amountPaid) {
-                try {
-                    $wallet->debit(
-                        $amountPaid,
-                        'Loan repayment',
-                        $paymentReference,
-                    );
-                    $paymentMethod = 'wallet';
-                } catch (Throwable $exception) {
-                    // If wallet debit fails, try card
-                    $paymentMethod = null;
-                }
+            $walletPortion = min($amountPaid, (float) ($wallet?->balance ?? 0));
+            $cardPortion = round($amountPaid - $walletPortion, 2);
+            $paymentMethod = $walletPortion > 0 && $cardPortion > 0 ? 'wallet_and_card' : ($cardPortion > 0 ? 'card' : 'wallet');
+            $authorization = null;
+            $gatewayResponse = null;
+            $providerReference = null;
+
+            if ($walletPortion > 0) {
+                $wallet->debit($walletPortion, 'Loan repayment', $paymentReference);
             }
 
-            // Fallback to card payment if wallet insufficient
-            if (!$paymentMethod) {
+            if ($cardPortion > 0) {
                 $authorization = $user->paymentAuthorizations()
-                    ->where('status', 'active')
-                    ->where('reusable', true)
-                    ->first();
-
-                if (!$authorization || !$authorization->isUsable()) {
-                    throw new \RuntimeException('Insufficient wallet balance. Please fund your wallet or authorize a card for automatic payment.');
+                    ->where('status', 'active')->where('reusable', true)->first();
+                if (! $authorization || ! $authorization->isUsable()) {
+                    throw new \RuntimeException('Insufficient wallet balance. Please fund your wallet or authorize a card for the remaining amount.');
                 }
 
-                $reference = 'loan-repay-'.$loan->id.'-'.$schedule->id.'-'.str()->uuid();
+                $providerReference = 'loan-repay-'.$loan->id.'-'.$schedule->id.'-'.str()->uuid();
                 try {
-                    $response = $this->repaymentService->chargeAuthorization(
+                    $gatewayResponse = $this->repaymentService->chargeAuthorization(
                         $user,
                         $authorization,
-                        (int) $this->repaymentService->amountToMinor($amountPaid),
-                        $reference,
-                        [
-                            'purpose' => 'manual_loan_repayment',
-                            'user_id' => $user->id,
-                            'loan_id' => $loan->id,
-                            'loan_installment_id' => $schedule->id,
-                        ]
+                        $this->repaymentService->amountToMinor($cardPortion),
+                        $providerReference,
+                        ['purpose' => 'loan_repayment', 'user_id' => $user->id, 'loan_id' => $loan->id, 'loan_installment_id' => $schedule->id]
                     );
-
-                    $gatewayResponse = $response;
-                    $paymentMethod = 'card';
-                    $paymentAuthorizationId = $authorization->id;
                 } catch (Throwable $exception) {
                     throw new \RuntimeException('Card payment failed: '.$exception->getMessage());
                 }
             }
 
-            // Calculate new schedule state
-            $newAmountPaid = round($schedule->amount_paid + $amountPaid, 2);
+            // Wallet funds are applied immediately; card funds are finalized by webhook.
+            $appliedAmount = $cardPortion > 0 ? $walletPortion : $amountPaid;
+            $newAmountPaid = round($schedule->amount_paid + $appliedAmount, 2);
             $remainingDue = max(0, round($schedule->total_due - $newAmountPaid, 2));
             $scheduleStatus = $newAmountPaid >= $schedule->total_due ? 'paid' : 'partial';
 
@@ -105,28 +84,33 @@ class PaymentService
                 'repayment_schedule_id' => $schedule->id,
                 'user_id' => $user->id,
                 'due_date' => $schedule->due_date,
-                'amount_due' => $schedule->total_due,
-                'amount_paid' => $amountPaid,
-                'paid_at' => now(),
-                'status' => $scheduleStatus === 'paid' ? 'paid' : 'partial',
+                'amount_due' => $cardPortion > 0 ? $cardPortion : $amountPaid,
+                'amount_paid' => $walletPortion,
+                'paid_at' => $cardPortion > 0 ? null : now(),
+                'status' => $cardPortion > 0 ? 'pending' : ($scheduleStatus === 'paid' ? 'paid' : 'partial'),
                 'payment_reference' => $paymentReference,
-                'payment_authorization_id' => $paymentAuthorizationId,
-                'provider' => $paymentMethod === 'card' ? 'paystack' : null,
-                'provider_reference' => $paymentMethod === 'card' ? 'loan-repay-'.$loan->id.'-'.$schedule->id.'-'.str()->uuid() : null,
+                'payment_authorization_id' => $authorization?->id,
+                'provider' => $cardPortion > 0 ? 'paystack' : null,
+                'provider_reference' => $providerReference,
+                'amount_minor' => $cardPortion > 0 ? $this->repaymentService->amountToMinor($cardPortion) : null,
                 'gateway_response' => $gatewayResponse,
                 'metadata' => [
                     'payment_method' => $paymentMethod,
+                    'wallet_amount' => $walletPortion,
+                    'card_amount' => $cardPortion,
                     'user_id' => $user->id,
                     'loan_id' => $loan->id,
                 ],
             ]);
 
             // Update schedule
-            $schedule->update([
+            if ($appliedAmount > 0 || $cardPortion === 0.0) {
+                $schedule->update([
                 'amount_paid' => $newAmountPaid,
                 'balance_due' => $remainingDue,
                 'status' => $scheduleStatus,
-            ]);
+                ]);
+            }
 
             // Update loan status if all schedules paid
             if ($loan->repaymentSchedules()->whereIn('status', ['pending', 'partial'])->count() === 0) {
