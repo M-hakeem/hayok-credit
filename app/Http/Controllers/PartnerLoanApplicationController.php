@@ -161,7 +161,7 @@ class PartnerLoanApplicationController extends Controller
 
                 // 5. Loan — always create a new record
                 $amount             = (float) $request->amount_requested;
-                $totalInterest      = round($amount * ($interestRate / 100) * ($termMonths / 12), 2);
+                $totalInterest      = round($amount * ($interestRate / 100), 2);
                 $totalRepayable     = round($amount + $totalInterest, 2);
                 $monthlyInstallment = round($totalRepayable / $termMonths, 2);
 

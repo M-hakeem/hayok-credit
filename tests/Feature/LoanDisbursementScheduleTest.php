@@ -66,4 +66,52 @@ class LoanDisbursementScheduleTest extends TestCase
         $expectedDueDate = Carbon::parse($loan->disbursement->disbursed_at)->addMonths(1)->toDateString();
         $this->assertSame($expectedDueDate, $loan->repaymentSchedules()->orderBy('due_date')->first()->due_date->toDateString());
     }
+
+    public function test_configured_term_rate_is_split_evenly_across_installments(): void
+    {
+        $user = User::create([
+            'fullname' => 'Two Month Borrower',
+            'email' => 'two-month@example.com',
+            'phone_number' => '08012345670',
+            'bank_name' => 'Test Bank',
+            'bank_account_number' => '1234567890',
+            'bank_account_name' => 'Two Month Borrower',
+            'bank_code' => '123',
+            'password' => 'secret1234',
+            'role' => 'admin',
+        ]);
+
+        $loan = Loan::create([
+            'user_id' => $user->id,
+            'amount_requested' => 10000,
+            'interest_rate' => 5,
+            'total_interest' => 500,
+            'total_repayable' => 10500,
+            'monthly_installment' => 5250,
+            'term_months' => 2,
+            'status' => 'approved',
+            'approved_at' => now(),
+            'application_reason' => 'Test loan',
+        ]);
+
+        LoanDisbursement::create([
+            'loan_id' => $loan->id,
+            'user_id' => $user->id,
+            'amount' => 10000,
+            'bank_name' => $user->bank_name,
+            'bank_account_number' => $user->bank_account_number,
+            'bank_account_name' => $user->bank_account_name,
+            'bank_code' => $user->bank_code,
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/admin/loans/{$loan->id}/disburse")
+            ->assertOk();
+
+        $schedules = $loan->repaymentSchedules()->orderBy('installment_number')->get();
+        $this->assertCount(2, $schedules);
+        $this->assertSame('5250.00', $schedules[0]->total_due);
+        $this->assertSame('5250.00', $schedules[1]->total_due);
+    }
 }

@@ -16,7 +16,7 @@ class LoanController extends Controller
     {
         $user = auth()->user();
 
-        $loans = Loan::with('payments')
+        $loans = Loan::with(['payments', 'repaymentSchedules'])
             ->where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -68,7 +68,7 @@ class LoanController extends Controller
 
         $amountRequested = $request->amount_requested;
 
-        $totalInterest = round($amountRequested * ($interestRate / 100) * ($termMonths / 12), 2);
+        $totalInterest = round($amountRequested * ($interestRate / 100), 2);
         $totalRepayable = round($amountRequested + $totalInterest, 2);
         $monthlyInstallment = round($totalRepayable / $termMonths, 2);
 

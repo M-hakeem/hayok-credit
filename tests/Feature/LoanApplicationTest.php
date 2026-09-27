@@ -18,16 +18,20 @@ class LoanApplicationTest extends TestCase
             'role' => 'user',
         ]);
         $user->wallet()->create(['balance' => 0, 'currency' => 'NGN']);
-        LoanInterestSetting::create(['interest_rate' => 10, 'tenure_months' => 6, 'active' => true]);
+        LoanInterestSetting::create(['interest_rate' => 5, 'tenure_months' => 2, 'active' => true]);
 
         $this->actingAs($user, 'sanctum')
             ->postJson('/api/user/loans', [
                 'amount_requested' => 10000,
-                'term_months' => 6,
+                'term_months' => 2,
                 'application_reason' => 'Personal expenses',
             ])
             ->assertCreated()
-            ->assertJsonPath('status', 'success');
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.interest_rate', '5.00')
+            ->assertJsonPath('data.total_interest', '500.00')
+            ->assertJsonPath('data.total_repayable', '10500.00')
+            ->assertJsonPath('data.monthly_installment', '5250.00');
     }
 
     public function test_user_without_wallet_cannot_apply_for_a_loan(): void
