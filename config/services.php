@@ -39,6 +39,21 @@ return [
         'api_key' => env('PARTNER_API_KEY'),
     ],
 
+    'termii' => [
+        'api_key' => env('TERMII_API_KEY'),
+        'base_url' => env('TERMII_BASE_URL', 'https://v3.api.termii.com'),
+        'sender_id' => env('TERMII_SENDER_ID'),
+        'whatsapp_sender_id' => env('TERMII_WHATSAPP_SENDER_ID', env('TERMII_SENDER_ID')),
+        'sms_channel' => env('TERMII_SMS_CHANNEL', 'dnd'),
+        'whatsapp_channel' => env('TERMII_WHATSAPP_CHANNEL', 'whatsapp'),
+        'timeout' => (int) env('TERMII_TIMEOUT', 10),
+        'connect_timeout' => (int) env('TERMII_CONNECT_TIMEOUT', 5),
+        'otp_ttl_minutes' => (int) env('TERMII_OTP_TTL_MINUTES', 5),
+        'max_attempts' => (int) env('TERMII_OTP_MAX_ATTEMPTS', 5),
+        'otp_cache_store' => env('TERMII_OTP_CACHE_STORE', 'file'),
+        'webhook_token' => env('TERMII_WEBHOOK_TOKEN'),
+    ],
+
     'insucare' => [
         'secret_key' => env('INSUCARE_SECRET_KEY'),
         'base_url' => env('INSUCARE_BASE_URL', 'https://api.insucare.ng'),
@@ -52,12 +67,12 @@ return [
     ],
 
     'first_central' => [
-    'base_url' => env('FIRST_CENTRAL_BASE_URL'),
-    'api_key' => env('FIRST_CENTRAL_API_KEY'),
-    'token' => env('FIRST_CENTRAL_TOKEN'),
-    'username' => env('FIRST_CENTRAL_USERNAME'),
-    'password' => env('FIRST_CENTRAL_PASSWORD'),
-    'timeout' => env('FIRST_CENTRAL_TIMEOUT', 20),
+        'base_url' => env('FIRST_CENTRAL_BASE_URL'),
+        'api_key' => env('FIRST_CENTRAL_API_KEY'),
+        'token' => env('FIRST_CENTRAL_TOKEN'),
+        'username' => env('FIRST_CENTRAL_USERNAME'),
+        'password' => env('FIRST_CENTRAL_PASSWORD'),
+        'timeout' => env('FIRST_CENTRAL_TIMEOUT', 20),
     ],
 
 ];

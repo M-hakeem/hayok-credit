@@ -12,12 +12,19 @@ class PhoneVerification extends Model
 
     protected $fillable = [
         'phone_number',
-        'pin_id',
-        'otp',
+        'otp_hash',
         'verified',
-        'expires_at',];
+        'expires_at',
+        'delivery_channel',
+        'delivery_status',
+        'attempt_count',
+        'message_id',
+        'purpose',
+    ];
+
     protected $casts = [
         'verified' => 'boolean',
         'expires_at' => 'datetime',
+        'attempt_count' => 'integer',
     ];
 }
