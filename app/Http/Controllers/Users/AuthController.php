@@ -3,23 +3,19 @@
 namespace App\Http\Controllers\Users;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\RegisterUserRequest;
 use App\Models\PhoneVerification;
 use App\Models\User;
-use Carbon\Carbon;
+use App\Services\TermiiOtpService;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Http;
 
 class AuthController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
-    {
-    }
+    public function index() {}
 
     /**
      * Show the form for creating a new resource.
@@ -32,146 +28,93 @@ class AuthController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-
     #[BodyParameter('phone', type: 'string', required: true, description: 'Phone number to send OTP to (e.g. +2347061234567)')]
-    public function sendPhoneOtp(Request $request)
+    public function sendPhoneOtp(Request $request, TermiiOtpService $termiiOtpService)
     {
         $request->validate([
-            'phone' => 'required|string',
+            'phone' => 'required|string|min:8|max:24',
         ]);
 
-        // Check if phone is already registered
-        $existingUser = User::where('phone_number', $request->phone)->first();
-        if ($existingUser) {
-            // Partner-created user — already verified, just needs a password
-            if ($existingUser->phone_verified_at && ! $existingUser->password) {
-                return response()->json([
-                    'status'  => 'partner_verified',
-                    'message' => 'Your number is already verified. Please proceed to set your password.',
-                ], 200);
-            }
-
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Phone number already registered. Please login.',
-            ], 422);
+        $phone = $termiiOtpService->normalizePhone($request->phone);
+        $existingUser = User::where('phone_number', $request->phone)->orWhere('phone_number', $phone)->first();
+        if (! $existingUser) {
+            $termiiOtpService->requestOtp($phone);
         }
-
-        // Call Termii API
-        $response = Http::post(env('TERMII_BASE_URL').'/api/sms/otp/send', [
-            "api_key" => env('TERMII_API_KEY'),
-            "message_type" => "NUMERIC",
-            "to" => $request->phone,
-            "from" => env('TERMII_SENDER_ID'),
-            "channel" => "generic",
-            "pin_attempts" => 3,
-            "pin_time_to_live" => 5,
-            "pin_length" => 6,
-            "pin_placeholder" => "< 1234 >",
-            "message_text" => "Your verification code is < 1234 >",
-            "pin_type" => "NUMERIC"
-        ]);
-
-        $result = $response->json();
-
-        if (!isset($result['pinId'])) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to send OTP',
-                'data' => $result
-            ], 500);
-        }
-
-        // Save OTP info in phone_verifications table
-        PhoneVerification::updateOrCreate(
-            ['phone_number' => $request->phone],
-            [
-                'pin_id' => $result['pinId'],
-                'otp' => null,
-                'verified' => false,
-                'expires_at' => now()->addMinutes(5)
-            ]
-        );
 
         return response()->json([
             'status' => 'success',
-            'message' => 'OTP sent successfully',
-            'data' => $result
+            'message' => 'If this number is eligible, a verification code will be sent shortly.',
+        ], 202);
+    }
+
+    public function resendPhoneOtp(Request $request, TermiiOtpService $termiiOtpService)
+    {
+        $request->validate([
+            'phone' => 'required_without:phone_number|string|min:8|max:24',
+            'phone_number' => 'required_without:phone|string|min:8|max:24',
         ]);
+
+        $rawPhone = $request->input('phone', $request->input('phone_number'));
+        $phone = $termiiOtpService->normalizePhone($rawPhone);
+        $existingUser = User::where('phone_number', $rawPhone)->orWhere('phone_number', $phone)->first();
+        $verification = PhoneVerification::where('phone_number', $phone)->first();
+
+        if (! $existingUser) {
+            $termiiOtpService->requestOtp($phone);
+        } elseif ($existingUser->password && $verification?->purpose === 'password_reset') {
+            $termiiOtpService->requestOtp($phone, 'password_reset');
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'If this number is eligible, a verification code will be sent shortly.',
+        ], 202);
     }
 
     // 2️⃣ Verify OTP
     #[BodyParameter('phone', type: 'string', required: true, description: 'Phone number the OTP was sent to')]
-    #[BodyParameter('pin_id', type: 'string', required: true, description: 'Pin ID returned from the send-otp response')]
     #[BodyParameter('pin', type: 'string', required: true, description: 'The 6-digit OTP code sent to the phone')]
-    public function verifyPhoneOtp(Request $request)
+    public function verifyPhoneOtp(Request $request, TermiiOtpService $termiiOtpService)
     {
         $request->validate([
-            'phone' => 'required|string',
-            'pin_id' => 'required|string',
-            'pin' => 'required|string',
+            'phone' => 'required|string|min:8|max:24',
+            'pin' => 'required|string|size:6',
         ]);
 
-        $verification = PhoneVerification::where('phone_number', $request->phone)->first();
-        if (!$verification) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'No OTP request found for this phone'
-            ], 404);
-        }
-
-        // Check expiration
-        if ($verification->expires_at->isPast()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'OTP has expired'
-            ], 422);
-        }
-
-        // Call Termii verify
-        $response = Http::post(env('TERMII_BASE_URL').'/api/sms/otp/verify', [
-            "api_key" => env('TERMII_API_KEY'),
-            "pin_id" => $request->pin_id,
-            "pin" => $request->pin
-        ]);
-
-        $result = $response->json();
-
-        if (isset($result['verified']) && $result['verified'] === true) {
-            $verification->update([
-                'verified' => true,
-                'otp' => $request->pin,
-            ]);
-
+        $result = $termiiOtpService->verifyOtp($request->phone, $request->pin);
+        if ($result === 'verified') {
             return response()->json([
                 'status' => 'success',
-                'message' => 'Phone number verified successfully'
+                'message' => 'Phone number verified successfully',
             ]);
         }
 
         return response()->json([
             'status' => 'error',
-            'message' => 'Invalid OTP'
-        ], 422);
+            'message' => $result === 'too_many_attempts'
+                ? 'Too many verification attempts. Please request a new code.'
+                : 'Unable to verify this code. Request a new code and try again.',
+        ], $result === 'too_many_attempts' ? 429 : 422);
     }
 
     #[BodyParameter('phone_number', type: 'string', required: true, description: 'Verified phone number')]
     #[BodyParameter('password', type: 'string', required: true, description: 'Password (min 6 characters)')]
     #[BodyParameter('password_confirmation', type: 'string', required: true, description: 'Must match the password field')]
-    public function setPassword(Request $request)
+    public function setPassword(Request $request, TermiiOtpService $termiiOtpService)
     {
         $request->validate([
             'phone_number' => 'required|string',
             'password' => 'required|string|min:6|confirmed',
         ]);
 
-        $existingUser = User::where('phone_number', $request->phone_number)->first();
+        $phone = $termiiOtpService->normalizePhone($request->phone_number);
+        $existingUser = User::where('phone_number', $request->phone_number)->orWhere('phone_number', $phone)->first();
 
         // Partner-created user — phone already verified, just set the password
         if ($existingUser && $existingUser->phone_verified_at) {
             if ($existingUser->password) {
                 return response()->json([
-                    'status'  => 'error',
+                    'status' => 'error',
                     'message' => 'Password already set. Please login.',
                 ], 422);
             }
@@ -179,39 +122,47 @@ class AuthController extends Controller
             $existingUser->update(['password' => $request->password]);
 
             return response()->json([
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => 'Password set successfully. You can now login.',
-                'data'    => $existingUser,
+                'data' => $existingUser,
             ], 200);
         }
 
         // Normal OTP flow
-        $verification = PhoneVerification::where('phone_number', $request->phone_number)->first();
+        $verification = PhoneVerification::where('phone_number', $phone)->first();
 
-        if (! $verification || ! $verification->verified) {
+        if (! $verification || ! $verification->verified || $verification->purpose !== 'registration') {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
+                'message' => 'Phone number not verified.',
+            ], 422);
+        }
+
+        if (! $verification->expires_at || $verification->expires_at->isPast()) {
+            return response()->json([
+                'status' => 'error',
                 'message' => 'Phone number not verified.',
             ], 422);
         }
 
         if ($existingUser) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'User already exists. Please login.',
             ], 422);
         }
 
         $user = User::create([
-            'phone_number'      => $request->phone_number,
-            'password'          => $request->password,
+            'phone_number' => $phone,
+            'password' => $request->password,
             'phone_verified_at' => now(),
         ]);
+        $termiiOtpService->consume($verification);
 
         return response()->json([
-            'status'  => 'success',
+            'status' => 'success',
             'message' => 'Password set successfully. You can now login.',
-            'data'    => $user,
+            'data' => $user,
         ], 201);
     }
 
@@ -228,17 +179,17 @@ class AuthController extends Controller
 
         $user = User::where('phone_number', $request->phone_number)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Invalid phone number or password'
+                'message' => 'Invalid phone number or password',
             ], 401);
         }
 
         if ($user->is_blacklisted) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Your account has been suspended. Please contact support.'
+                'message' => 'Your account has been suspended. Please contact support.',
             ], 403);
         }
 
@@ -249,8 +200,8 @@ class AuthController extends Controller
             'message' => 'Login successful',
             'data' => [
                 'token' => $token,
-                'user' => $user
-            ]
+                'user' => $user,
+            ],
         ]);
     }
 
@@ -266,104 +217,60 @@ class AuthController extends Controller
             'message' => 'Logout successful',
         ]);
     }
+
     // 4️⃣ Forgot password — send OTP to a registered phone
     #[BodyParameter('phone_number', type: 'string', required: true, description: 'Registered phone number to reset the password for')]
-    public function forgotPassword(Request $request)
+    public function forgotPassword(Request $request, TermiiOtpService $termiiOtpService)
     {
         $request->validate([
             'phone_number' => 'required|string',
         ]);
 
-        $user = User::where('phone_number', $request->phone_number)->first();
-
-        if (! $user) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'No account found with this phone number.',
-            ], 404);
+        $phone = $termiiOtpService->normalizePhone($request->phone_number);
+        $user = User::where('phone_number', $request->phone_number)->orWhere('phone_number', $phone)->first();
+        if ($user?->password) {
+            $termiiOtpService->requestOtp($phone, 'password_reset');
         }
-
-        if (! $user->password) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'No password set for this account yet. Please use set-password instead.',
-            ], 422);
-        }
-
-        // Call Termii API
-        $response = Http::post(env('TERMII_BASE_URL').'/api/sms/otp/send', [
-            "api_key" => env('TERMII_API_KEY'),
-            "message_type" => "NUMERIC",
-            "to" => $request->phone_number,
-            "from" => env('TERMII_SENDER_ID'),
-            "channel" => "generic",
-            "pin_attempts" => 3,
-            "pin_time_to_live" => 5,
-            "pin_length" => 6,
-            "pin_placeholder" => "< 1234 >",
-            "message_text" => "Your password reset code is < 1234 >",
-            "pin_type" => "NUMERIC"
-        ]);
-
-        $result = $response->json();
-
-        if (!isset($result['pinId'])) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to send OTP',
-                'data' => $result
-            ], 500);
-        }
-
-        PhoneVerification::updateOrCreate(
-            ['phone_number' => $request->phone_number],
-            [
-                'pin_id' => $result['pinId'],
-                'otp' => null,
-                'verified' => false,
-                'expires_at' => now()->addMinutes(5)
-            ]
-        );
 
         return response()->json([
             'status' => 'success',
-            'message' => 'OTP sent successfully',
-            'data' => $result
-        ]);
+            'message' => 'If this number is eligible, a verification code will be sent shortly.',
+        ], 202);
     }
 
     // 5️⃣ Reset password — after OTP verified via verify-otp
     #[BodyParameter('phone_number', type: 'string', required: true, description: 'Verified phone number')]
     #[BodyParameter('password', type: 'string', required: true, description: 'New password (min 6 characters)')]
     #[BodyParameter('password_confirmation', type: 'string', required: true, description: 'Must match the password field')]
-    public function resetPassword(Request $request)
+    public function resetPassword(Request $request, TermiiOtpService $termiiOtpService)
     {
         $request->validate([
             'phone_number' => 'required|string',
             'password' => 'required|string|min:6|confirmed',
         ]);
 
-        $verification = PhoneVerification::where('phone_number', $request->phone_number)->first();
+        $phone = $termiiOtpService->normalizePhone($request->phone_number);
+        $verification = PhoneVerification::where('phone_number', $phone)->first();
 
-        if (! $verification || ! $verification->verified) {
+        if (! $verification || ! $verification->verified || $verification->purpose !== 'password_reset') {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Phone number not verified.',
             ], 422);
         }
 
-        if ($verification->expires_at->isPast()) {
+        if (! $verification->expires_at || $verification->expires_at->isPast()) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Verification has expired. Please request a new OTP.',
             ], 422);
         }
 
-        $user = User::where('phone_number', $request->phone_number)->first();
+        $user = User::where('phone_number', $request->phone_number)->orWhere('phone_number', $phone)->first();
 
         if (! $user) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'No account found with this phone number.',
             ], 404);
         }
@@ -371,11 +278,11 @@ class AuthController extends Controller
         $user->update(['password' => $request->password]);
 
         // Invalidate the verification so it can't be replayed, and log out other sessions
-        $verification->update(['verified' => false]);
+        $termiiOtpService->invalidate($verification);
         $user->tokens()->delete();
 
         return response()->json([
-            'status'  => 'success',
+            'status' => 'success',
             'message' => 'Password reset successfully. You can now login.',
         ]);
     }
@@ -391,24 +298,24 @@ class AuthController extends Controller
 
         $user = User::where('phone_number', $request->phone_number)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Invalid phone number or password'
+                'message' => 'Invalid phone number or password',
             ], 401);
         }
 
         if ($user->role !== 'admin') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unauthorized. Admin access required.'
+                'message' => 'Unauthorized. Admin access required.',
             ], 403);
         }
 
         if ($user->is_blacklisted) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Your account has been suspended. Please contact support.'
+                'message' => 'Your account has been suspended. Please contact support.',
             ], 403);
         }
 
@@ -419,8 +326,8 @@ class AuthController extends Controller
             'message' => 'Admin login successful',
             'data' => [
                 'token' => $token,
-                'user' => $user
-            ]
+                'user' => $user,
+            ],
         ]);
     }
 

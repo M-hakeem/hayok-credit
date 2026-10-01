@@ -5,24 +5,26 @@ use App\Http\Controllers\BusinessLoanApplicationController;
 use App\Http\Controllers\ClaimifyWalletController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmploymentController;
+use App\Http\Controllers\FirstCentralController;
 use App\Http\Controllers\GuarantorController;
 use App\Http\Controllers\LoanController;
 use App\Http\Controllers\LoanDisbursementController;
 use App\Http\Controllers\LoanInterestSettingController;
 use App\Http\Controllers\LoanPaymentController;
 use App\Http\Controllers\OrganisationController;
-use App\Http\Controllers\FirstCentralController;
 use App\Http\Controllers\PartnerLoanApplicationController;
-use App\Http\Controllers\Users\AuthController;
-use App\Http\Controllers\Users\UserController;
-use App\Http\Controllers\WalletController;
 use App\Http\Controllers\PaystackBankController;
 use App\Http\Controllers\PaystackPaymentController;
 use App\Http\Controllers\PaystackWebhookController;
+use App\Http\Controllers\TermiiDeliveryWebhookController;
+use App\Http\Controllers\Users\AuthController;
+use App\Http\Controllers\Users\UserController;
+use App\Http\Controllers\WalletController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
     Route::post('send-otp', [AuthController::class, 'sendPhoneOtp'])->middleware('throttle:send-otp');
+    Route::post('resend-otp', [AuthController::class, 'resendPhoneOtp'])->middleware('throttle:send-otp');
     Route::post('verify-otp', [AuthController::class, 'verifyPhoneOtp'])->middleware('throttle:verify-otp');
     Route::post('set-password', [AuthController::class, 'setPassword']);
     Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login');
@@ -107,6 +109,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
 
 Route::get('paystack/banks', [PaystackBankController::class, 'index'])->middleware('throttle:30,1');
 Route::post('paystack/webhook', PaystackWebhookController::class);
+Route::post('webhooks/termii/delivery/{token}', TermiiDeliveryWebhookController::class)->middleware('throttle:60,1');
 
 // Partner integration endpoint — secured by X-Partner-Key header
 Route::middleware('partner')->prefix('partner')->group(function () {
