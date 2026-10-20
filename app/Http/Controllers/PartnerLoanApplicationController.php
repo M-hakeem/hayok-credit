@@ -8,6 +8,7 @@ use App\Models\LoanInterestSetting;
 use App\Models\Organisation;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -87,20 +88,12 @@ class PartnerLoanApplicationController extends Controller
                 }
 
                 // 2. Address — create for new user; update latest (or create) if fields supplied
+                $addressData = $request->input('address', []);
                 if ($isNewUser) {
-                    $address = $user->addresses()->create([
-                        'residential_address' => $request->residential_address,
-                        'state'               => $request->state,
-                        'lga'                 => $request->lga,
+                    $address = $user->addresses()->create(array_merge($addressData, [
                         'verification_status' => 'verified',
-                    ]);
-                } elseif ($request->filled('residential_address') || $request->filled('state') || $request->filled('lga')) {
-                    $addressData = array_filter([
-                        'residential_address' => $request->residential_address,
-                        'state'               => $request->state,
-                        'lga'                 => $request->lga,
-                    ], fn($v) => $v !== null);
-
+                    ]));
+                } elseif ($request->filled('address.residential_address') || $request->filled('address.state') || $request->filled('address.lga')) {
                     $address = $user->addresses()->latest()->first();
                     if ($address) {
                         $address->update($addressData);
@@ -121,6 +114,13 @@ class PartnerLoanApplicationController extends Controller
                             'relationship' => $guarantorData['relationship'],
                             'id_type'      => $guarantorData['id_type'] ?? null,
                         ], fn($v) => $v !== null);
+
+                        $idFile = $request->decodeGuarantorIdFile($guarantorData['id_file']);
+                        $idFilePath = 'guarantor_ids/'.Str::uuid().'.'.$idFile['extension'];
+                        if (! Storage::disk('public')->put($idFilePath, $idFile['contents'])) {
+                            throw new \RuntimeException('Failed to store guarantor ID document.');
+                        }
+                        $payload['id_file_path'] = $idFilePath;
 
                         $guarantors[] = $user->guarantors()->updateOrCreate(
                             ['guarantor_type' => $guarantorData['guarantor_type']],

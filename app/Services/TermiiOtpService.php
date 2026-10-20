@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class TermiiOtpService
 {
@@ -160,6 +161,16 @@ class TermiiOtpService
 
     private function sendWhatsAppFallback(PhoneVerification $verification, string $otp): void
     {
+        $senderId = config('services.termii.whatsapp_sender_id');
+        if (! is_string($senderId) || trim($senderId) === '') {
+            Log::warning('Termii WhatsApp fallback skipped because no WhatsApp sender ID is configured', [
+                'host' => parse_url((string) config('services.termii.base_url'), PHP_URL_HOST) ?: 'unknown',
+            ]);
+            $verification->update(['delivery_status' => 'failed']);
+
+            return;
+        }
+
         [$sent] = $this->send($verification->phone_number, $otp, 'whatsapp');
         $verification->update([
             'delivery_channel' => 'whatsapp',
@@ -186,13 +197,29 @@ class TermiiOtpService
                 ->connectTimeout(config('services.termii.connect_timeout', 5))
                 ->timeout(config('services.termii.timeout', 10))
                 ->post(rtrim(config('services.termii.base_url'), '/').'/api/sms/send', $payload);
-        } catch (ConnectionException) {
+        } catch (ConnectionException $exception) {
+            Log::warning('Termii message request connection failed', [
+                'host' => parse_url((string) config('services.termii.base_url'), PHP_URL_HOST) ?: 'unknown',
+                'channel' => $channel,
+                'exception' => $exception->getMessage(),
+            ]);
+
             return [false, null];
         }
 
         $messageId = $response->json('message_id') ?? $response->json('messageId');
+        $sent = $response->successful() && is_string($messageId) && $messageId !== '';
+        if (! $sent) {
+            $providerMessage = $response->json('message') ?? $response->json('error');
+            Log::warning('Termii message request was not accepted', [
+                'host' => parse_url((string) config('services.termii.base_url'), PHP_URL_HOST) ?: 'unknown',
+                'channel' => $channel,
+                'http_status' => $response->status(),
+                'provider_message' => is_string($providerMessage) ? substr($providerMessage, 0, 300) : null,
+            ]);
+        }
 
-        return [$response->successful() && is_string($messageId) && $messageId !== '', $messageId];
+        return [$sent, $messageId];
     }
 
     private function otpCacheKey(int $verificationId): string

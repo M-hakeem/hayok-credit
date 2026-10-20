@@ -12,6 +12,25 @@ class PartnerLoanApplicationRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $address = $this->input('address', []);
+
+        if (! is_array($address)) {
+            return;
+        }
+
+        $legacyAddress = array_filter([
+            'residential_address' => $this->input('residential_address'),
+            'state' => $this->input('state'),
+            'lga' => $this->input('lga'),
+        ], fn ($value) => $value !== null);
+
+        if ($legacyAddress !== []) {
+            $this->merge(['address' => array_merge($legacyAddress, $address)]);
+        }
+    }
+
     public function rules(): array
     {
         return [
@@ -27,9 +46,10 @@ class PartnerLoanApplicationRequest extends FormRequest
             'bvn'                 => 'nullable|string|max:11',
 
             // Address
-            'residential_address' => 'nullable|string|min:10',
-            'state'               => 'nullable|string|max:100',
-            'lga'                 => 'nullable|string|max:100',
+            'address'                    => 'nullable|array',
+            'address.residential_address' => 'nullable|string|min:10',
+            'address.state'               => 'nullable|string|max:100',
+            'address.lga'                 => 'nullable|string|max:100',
 
             // Bank
             'bank_name'           => 'nullable|string|max:255',
@@ -48,7 +68,8 @@ class PartnerLoanApplicationRequest extends FormRequest
             'guarantors.*.name'           => 'required_with:guarantors|string|max:255',
             'guarantors.*.phone_number'   => 'required_with:guarantors|string|max:20',
             'guarantors.*.relationship'   => 'required_with:guarantors|string|max:100',
-            'guarantors.*.id_type'        => 'nullable|in:NIN,BVN,Drivers License,International Passport,Voters Card',
+            'guarantors.*.id_type'        => 'required_with:guarantors|in:NIN,BVN,Drivers License,International Passport,Voters Card',
+            'guarantors.*.id_file'        => 'required_with:guarantors|string|max:6990508',
 
             // Employment
             'employment'                        => 'nullable|array',
@@ -70,7 +91,7 @@ class PartnerLoanApplicationRequest extends FormRequest
                 // New user — enforce required fields
                 $required = [
                     'fullname', 'dob', 'gender', 'nin', 'bvn',
-                    'residential_address',
+                    'address.residential_address',
                     'bank_name', 'bank_account_number', 'bank_account_name',
                 ];
                 foreach ($required as $field) {
@@ -83,7 +104,39 @@ class PartnerLoanApplicationRequest extends FormRequest
                     $validator->errors()->add('guarantors', 'At least one guarantor is required.');
                 }
             }
+
+            foreach ($this->input('guarantors', []) as $index => $guarantor) {
+                $encodedFile = $guarantor['id_file'] ?? null;
+                if (! is_string($encodedFile)) {
+                    continue;
+                }
+
+                if ($this->decodeGuarantorIdFile($encodedFile) === null) {
+                    $validator->errors()->add(
+                        "guarantors.{$index}.id_file",
+                        'The ID file must be valid base64-encoded PDF, JPG, JPEG, or PNG content no larger than 5MB.'
+                    );
+                }
+            }
         });
+    }
+
+    public function decodeGuarantorIdFile(string $encodedFile): ?array
+    {
+        $contents = base64_decode($encodedFile, true);
+        if ($contents === false || strlen($contents) > 5 * 1024 * 1024) {
+            return null;
+        }
+
+        $mimeType = (new \finfo(FILEINFO_MIME_TYPE))->buffer($contents);
+        $extension = match ($mimeType) {
+            'application/pdf' => 'pdf',
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            default => null,
+        };
+
+        return $extension === null ? null : ['contents' => $contents, 'extension' => $extension];
     }
 
     public function messages(): array
@@ -91,8 +144,6 @@ class PartnerLoanApplicationRequest extends FormRequest
         return [
             'guarantors.*.guarantor_type.in' => 'Guarantor type must be 1st, 2nd, or 3rd.',
             'guarantors.*.id_type.in'        => 'ID type must be NIN, BVN, Drivers License, International Passport, or Voters Card.',
-            'guarantors.*.id_file.mimes'     => 'ID document must be a PDF, JPG, JPEG, or PNG file.',
-            'guarantors.*.id_file.max'       => 'ID document must not exceed 5MB.',
         ];
     }
 }

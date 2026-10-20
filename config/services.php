@@ -43,7 +43,7 @@ return [
         'api_key' => env('TERMII_API_KEY'),
         'base_url' => env('TERMII_BASE_URL', 'https://v3.api.termii.com'),
         'sender_id' => env('TERMII_SENDER_ID'),
-        'whatsapp_sender_id' => env('TERMII_WHATSAPP_SENDER_ID', env('TERMII_SENDER_ID')),
+        'whatsapp_sender_id' => env('TERMII_WHATSAPP_SENDER_ID'),
         'sms_channel' => env('TERMII_SMS_CHANNEL', 'dnd'),
         'whatsapp_channel' => env('TERMII_WHATSAPP_CHANNEL', 'whatsapp'),
         'timeout' => (int) env('TERMII_TIMEOUT', 10),

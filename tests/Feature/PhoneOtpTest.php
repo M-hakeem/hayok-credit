@@ -68,6 +68,22 @@ class PhoneOtpTest extends TestCase
         ])->assertOk()->assertJsonPath('status', 'success');
     }
 
+    public function test_it_skips_whatsapp_fallback_when_no_whatsapp_sender_is_configured(): void
+    {
+        config(['services.termii.whatsapp_sender_id' => null]);
+        Http::fake(['*' => Http::response(['message' => 'SMS rejected'], 422)]);
+
+        $this->postJson('/api/auth/send-otp', ['phone' => '+2347061234567'])->assertAccepted();
+
+        $this->assertCount(1, Http::recorded());
+        $this->assertSame('dnd', Http::recorded()->first()[0]['channel']);
+        $this->assertDatabaseHas('phone_verifications', [
+            'phone_number' => '+2347061234567',
+            'delivery_channel' => 'sms',
+            'delivery_status' => 'failed',
+        ]);
+    }
+
     public function test_resend_replaces_the_previous_otp(): void
     {
         Http::fakeSequence()
