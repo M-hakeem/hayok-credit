@@ -457,56 +457,7 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "anyOf": [
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "status": {
-                                                    "type": "string",
-                                                    "const": "success"
-                                                },
-                                                "message": {
-                                                    "type": "string",
-                                                    "const": "OTP sent successfully"
-                                                },
-                                                "data": {
-                                                    "type": "string"
-                                                }
-                                            },
-                                            "required": [
-                                                "status",
-                                                "message",
-                                                "data"
-                                            ]
-                                        },
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "status": {
-                                                    "type": "string",
-                                                    "const": "partner_verified"
-                                                },
-                                                "message": {
-                                                    "type": "string",
-                                                    "const": "Your number is already verified. Please proceed to set your password."
-                                                }
-                                            },
-                                            "required": [
-                                                "status",
-                                                "message"
-                                            ]
-                                        }
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "500": {
+                    "202": {
                         "description": "",
                         "content": {
                             "application/json": {
@@ -515,20 +466,74 @@
                                     "properties": {
                                         "status": {
                                             "type": "string",
-                                            "const": "error"
+                                            "const": "success"
                                         },
                                         "message": {
                                             "type": "string",
-                                            "const": "Failed to send OTP"
-                                        },
-                                        "data": {
-                                            "type": "string"
+                                            "const": "If this number is eligible, a verification code will be sent shortly."
                                         }
                                     },
                                     "required": [
                                         "status",
-                                        "message",
-                                        "data"
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/auth/resend-otp": {
+            "post": {
+                "operationId": "auth.resendPhoneOtp",
+                "tags": [
+                    "Auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "phone": {
+                                        "type": "string",
+                                        "minLength": 8,
+                                        "maxLength": 24
+                                    },
+                                    "phone_number": {
+                                        "type": "string",
+                                        "minLength": 8,
+                                        "maxLength": 24
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "If this number is eligible, a verification code will be sent shortly."
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message"
                                     ]
                                 }
                             }
@@ -557,10 +562,6 @@
                                         "type": "string",
                                         "description": "Phone number the OTP was sent to"
                                     },
-                                    "pin_id": {
-                                        "type": "string",
-                                        "description": "Pin ID returned from the send-otp response"
-                                    },
                                     "pin": {
                                         "type": "string",
                                         "description": "The 6-digit OTP code sent to the phone"
@@ -568,7 +569,6 @@
                                 },
                                 "required": [
                                     "phone",
-                                    "pin_id",
                                     "pin"
                                 ]
                             }
@@ -576,56 +576,39 @@
                     }
                 },
                 "responses": {
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
-                    },
                     "200": {
                         "description": "",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "const": "success"
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
                                         },
-                                        "message": {
-                                            "type": "string",
-                                            "const": "Phone number verified successfully"
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "const": "success"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Phone number verified successfully"
+                                                }
+                                            },
+                                            "required": [
+                                                "status",
+                                                "message"
+                                            ]
                                         }
-                                    },
-                                    "required": [
-                                        "status",
-                                        "message"
                                     ]
                                 }
                             }
                         }
                     },
-                    "404": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "const": "error"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "const": "No OTP request found for this phone"
-                                        }
-                                    },
-                                    "required": [
-                                        "status",
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     }
                 }
             }
@@ -1089,7 +1072,7 @@
                     }
                 },
                 "responses": {
-                    "200": {
+                    "202": {
                         "description": "",
                         "content": {
                             "application/json": {
@@ -1102,66 +1085,7 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "const": "OTP sent successfully"
-                                        },
-                                        "data": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "required": [
-                                        "status",
-                                        "message",
-                                        "data"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "const": "error"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "const": "Failed to send OTP"
-                                        },
-                                        "data": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "required": [
-                                        "status",
-                                        "message",
-                                        "data"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
-                    },
-                    "404": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "const": "error"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "const": "No account found with this phone number."
+                                            "const": "If this number is eligible, a verification code will be sent shortly."
                                         }
                                     },
                                     "required": [
@@ -1171,6 +1095,9 @@
                                 }
                             }
                         }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     }
                 }
             }
@@ -3564,58 +3491,10 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "const": "Loan disbursement marked as disbursed."
+                                            "const": "Loan disbursed to the user wallet."
                                         },
                                         "data": {
                                             "$ref": "#/components/schemas/LoanDisbursement"
-                                        }
-                                    },
-                                    "required": [
-                                        "status",
-                                        "message",
-                                        "data"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "202": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "const": "success"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "const": "Loan disbursement transfer initiated. Awaiting Paystack confirmation."
-                                        },
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "disbursement": {
-                                                    "anyOf": [
-                                                        {
-                                                            "$ref": "#/components/schemas/LoanDisbursement"
-                                                        },
-                                                        {
-                                                            "type": "null"
-                                                        }
-                                                    ]
-                                                },
-                                                "transfer": {
-                                                    "type": "array",
-                                                    "items": {}
-                                                }
-                                            },
-                                            "required": [
-                                                "disbursement",
-                                                "transfer"
-                                            ]
                                         }
                                     },
                                     "required": [
@@ -3633,22 +3512,6 @@
                             "application/json": {
                                 "schema": {
                                     "anyOf": [
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "status": {
-                                                    "type": "string",
-                                                    "const": "error"
-                                                },
-                                                "message": {
-                                                    "type": "string"
-                                                }
-                                            },
-                                            "required": [
-                                                "status",
-                                                "message"
-                                            ]
-                                        },
                                         {
                                             "type": "object",
                                             "properties": {
@@ -4280,7 +4143,7 @@
                                     },
                                     "payment_method": {
                                         "type": "string",
-                                        "description": "Payment method: wallet or card (defaults to auto-select: wallet first, then card)"
+                                        "description": "Uses the wallet first, then a saved card for any remaining amount."
                                     }
                                 },
                                 "required": [
@@ -4307,7 +4170,10 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "const": "Installment paid successfully."
+                                            "enum": [
+                                                "Wallet portion applied. Card payment is awaiting Paystack confirmation.",
+                                                "Installment paid successfully."
+                                            ]
                                         },
                                         "data": {
                                             "$ref": "#/components/schemas/LoanPayment"
@@ -4948,7 +4814,7 @@
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "$ref": "#/components/schemas/PartnerLoanApplicationRequest"
                             }
@@ -5570,6 +5436,56 @@
                 ]
             }
         },
+        "/user/payments/paystack/card-status": {
+            "get": {
+                "operationId": "paystackPayment.cardStatus",
+                "summary": "User card status",
+                "tags": [
+                    "PaystackPayment"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "has_card": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "has_card"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/user/payment-authorizations": {
             "get": {
                 "operationId": "paystackPayment.authorizations",
@@ -5720,6 +5636,36 @@
                 }
             }
         },
+        "/webhooks/termii/delivery/{token}": {
+            "post": {
+                "operationId": "termiiDeliveryWebhook",
+                "tags": [
+                    "TermiiDeliveryWebhook"
+                ],
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/user": {
             "get": {
                 "operationId": "user.index",
@@ -5777,35 +5723,31 @@
                                                             "null"
                                                         ]
                                                     },
-                                                    "residential_address": {
-                                                        "type": [
-                                                            "string",
-                                                            "null"
-                                                        ]
-                                                    },
-                                                    "state": {
-                                                        "type": [
-                                                            "string",
-                                                            "null"
-                                                        ]
-                                                    },
-                                                    "lga": {
-                                                        "type": [
-                                                            "string",
-                                                            "null"
-                                                        ]
-                                                    },
                                                     "nin": {
                                                         "type": [
                                                             "string",
                                                             "null"
                                                         ]
                                                     },
+                                                    "nin_verified_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ],
+                                                        "format": "date-time"
+                                                    },
                                                     "bvn": {
                                                         "type": [
                                                             "string",
                                                             "null"
                                                         ]
+                                                    },
+                                                    "bvn_verified_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ],
+                                                        "format": "date-time"
                                                     },
                                                     "phone_number": {
                                                         "type": "string"
@@ -5904,11 +5846,10 @@
                                                     "dob",
                                                     "gender",
                                                     "email",
-                                                    "residential_address",
-                                                    "state",
-                                                    "lga",
                                                     "nin",
+                                                    "nin_verified_at",
                                                     "bvn",
+                                                    "bvn_verified_at",
                                                     "phone_number",
                                                     "profile_image",
                                                     "bank_name",
@@ -5928,6 +5869,92 @@
                                                     "bank_account_number"
                                                 ]
                                             }
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/user/identity-verification-status": {
+            "get": {
+                "operationId": "user.identityVerificationStatus",
+                "summary": "Return the authenticated user's NIN and BVN status",
+                "tags": [
+                    "User"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "nin": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "added": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "verified": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "verified_at": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "added",
+                                                        "verified",
+                                                        "verified_at"
+                                                    ]
+                                                },
+                                                "bvn": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "added": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "verified": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "verified_at": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "added",
+                                                        "verified",
+                                                        "verified_at"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "nin",
+                                                "bvn"
+                                            ]
                                         }
                                     },
                                     "required": [
@@ -6036,7 +6063,8 @@
         "/user/profile-management-guide": {
             "get": {
                 "operationId": "user.profileManagementGuide",
-                "summary": "Get profile management endpoints guide\r\n\r\nThis endpoint returns information about all available profile management endpoints\r\nto help clients understand which endpoint to use for different profile updates",
+                "description": "This endpoint returns information about all available profile management endpoints\nto help clients understand which endpoint to use for different profile updates.",
+                "summary": "Get profile management endpoints guide",
                 "tags": [
                     "User"
                 ],
@@ -8265,10 +8293,16 @@
                         "type": "string"
                     },
                     "bank_name": {
-                        "type": "string"
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     },
                     "bank_account_name": {
-                        "type": "string"
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     },
                     "bank_code": {
                         "type": [
@@ -8719,28 +8753,6 @@
                         ],
                         "maxLength": 11
                     },
-                    "residential_address": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "description": "Address",
-                        "minLength": 10
-                    },
-                    "state": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "maxLength": 100
-                    },
-                    "lga": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "maxLength": 100
-                    },
                     "bank_name": {
                         "type": [
                             "string",
@@ -8787,6 +8799,33 @@
                             "null"
                         ],
                         "maxLength": 1000
+                    },
+                    "address": {
+                        "type": "object",
+                        "description": "Address",
+                        "properties": {
+                            "residential_address": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "minLength": 10
+                            },
+                            "state": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 100
+                            },
+                            "lga": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 100
+                            }
+                        }
                     },
                     "employment": {
                         "type": "object",
@@ -8843,10 +8882,7 @@
                                     "maxLength": 100
                                 },
                                 "id_type": {
-                                    "type": [
-                                        "string",
-                                        "null"
-                                    ],
+                                    "type": "string",
                                     "enum": [
                                         "NIN",
                                         "BVN",
@@ -8854,8 +8890,18 @@
                                         "International Passport",
                                         "Voters Card"
                                     ]
+                                },
+                                "id_file": {
+                                    "type": "string",
+                                    "format": "binary",
+                                    "contentMediaType": "application/octet-stream",
+                                    "description": "Multipart file upload (PDF, JPG, JPEG, or PNG); max 5MB.",
+                                    "maxLength": 5120
                                 }
-                            }
+                            },
+                            "required": [
+                                "id_file"
+                            ]
                         },
                         "minItems": 1,
                         "maxItems": 3
@@ -9589,11 +9635,6 @@
                         "format": "email",
                         "maxLength": 255
                     },
-                    "phone_number": {
-                        "type": "string",
-                        "minLength": 10,
-                        "maxLength": 20
-                    },
                     "profile_image": {
                         "type": "string",
                         "format": "binary",
@@ -9639,35 +9680,31 @@
                             "null"
                         ]
                     },
-                    "residential_address": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "state": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "lga": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
                     "nin": {
                         "type": [
                             "string",
                             "null"
                         ]
                     },
+                    "nin_verified_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
                     "bvn": {
                         "type": [
                             "string",
                             "null"
                         ]
+                    },
+                    "bvn_verified_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
                     },
                     "phone_number": {
                         "type": "string"
@@ -9760,11 +9797,10 @@
                     "dob",
                     "gender",
                     "email",
-                    "residential_address",
-                    "state",
-                    "lga",
                     "nin",
+                    "nin_verified_at",
                     "bvn",
+                    "bvn_verified_at",
                     "phone_number",
                     "profile_image",
                     "bank_name",

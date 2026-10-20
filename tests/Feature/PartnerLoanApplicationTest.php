@@ -5,12 +5,13 @@ namespace Tests\Feature;
 use App\Models\Address;
 use App\Models\Guarantor;
 use App\Models\LoanInterestSetting;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PartnerLoanApplicationTest extends TestCase
 {
-    public function test_partner_application_saves_nested_address_and_guarantor_as_json(): void
+    public function test_partner_application_saves_nested_address_and_guarantor_with_multipart_upload(): void
     {
         Storage::fake('public');
         config(['services.partner.api_key' => 'partner-key']);
@@ -22,7 +23,8 @@ class PartnerLoanApplicationTest extends TestCase
 
         $response = $this
             ->withHeader('X-Partner-Key', 'partner-key')
-            ->postJson('/api/partner/loan-application', [
+            ->withHeader('Accept', 'application/json')
+            ->post('/api/partner/loan-application', [
                 'organisation_name' => 'Test Organisation',
                 'phone_number' => '08012345670',
                 'fullname' => 'Test Applicant',
@@ -47,7 +49,10 @@ class PartnerLoanApplicationTest extends TestCase
                     'phone_number' => '08012345671',
                     'relationship' => 'Sibling',
                     'id_type' => 'NIN',
-                    'id_file' => base64_encode("%PDF-1.4\nTest guarantor ID\n%%EOF"),
+                    'id_file' => UploadedFile::fake()->createWithContent(
+                        'guarantor-id.pdf',
+                        "%PDF-1.4\nTest guarantor ID\n%%EOF"
+                    ),
                 ]],
             ]);
 
@@ -68,7 +73,8 @@ class PartnerLoanApplicationTest extends TestCase
         Storage::disk('public')->assertExists($guarantor->id_file_path);
 
         $this->withHeader('X-Partner-Key', 'partner-key')
-            ->postJson('/api/partner/loan-application', [
+            ->withHeader('Accept', 'application/json')
+            ->post('/api/partner/loan-application', [
                 'organisation_name' => 'Test Organisation',
                 'phone_number' => '08012345670',
                 'amount_requested' => 100000,
@@ -79,7 +85,7 @@ class PartnerLoanApplicationTest extends TestCase
                     'phone_number' => '08012345671',
                     'relationship' => 'Sibling',
                     'id_type' => 'NIN',
-                    'id_file' => 'not-valid-base64-or-an-image',
+                    'id_file' => UploadedFile::fake()->create('guarantor-id.txt', 1, 'text/plain'),
                 ]],
             ])
             ->assertUnprocessable()

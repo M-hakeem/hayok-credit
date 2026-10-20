@@ -69,7 +69,7 @@ class PartnerLoanApplicationRequest extends FormRequest
             'guarantors.*.phone_number'   => 'required_with:guarantors|string|max:20',
             'guarantors.*.relationship'   => 'required_with:guarantors|string|max:100',
             'guarantors.*.id_type'        => 'required_with:guarantors|in:NIN,BVN,Drivers License,International Passport,Voters Card',
-            'guarantors.*.id_file'        => 'required_with:guarantors|string|max:6990508',
+            'guarantors.*.id_file'        => 'required_with:guarantors|file|mimes:pdf,jpg,jpeg,png|max:5120',
 
             // Employment
             'employment'                        => 'nullable|array',
@@ -104,39 +104,7 @@ class PartnerLoanApplicationRequest extends FormRequest
                     $validator->errors()->add('guarantors', 'At least one guarantor is required.');
                 }
             }
-
-            foreach ($this->input('guarantors', []) as $index => $guarantor) {
-                $encodedFile = $guarantor['id_file'] ?? null;
-                if (! is_string($encodedFile)) {
-                    continue;
-                }
-
-                if ($this->decodeGuarantorIdFile($encodedFile) === null) {
-                    $validator->errors()->add(
-                        "guarantors.{$index}.id_file",
-                        'The ID file must be valid base64-encoded PDF, JPG, JPEG, or PNG content no larger than 5MB.'
-                    );
-                }
-            }
         });
-    }
-
-    public function decodeGuarantorIdFile(string $encodedFile): ?array
-    {
-        $contents = base64_decode($encodedFile, true);
-        if ($contents === false || strlen($contents) > 5 * 1024 * 1024) {
-            return null;
-        }
-
-        $mimeType = (new \finfo(FILEINFO_MIME_TYPE))->buffer($contents);
-        $extension = match ($mimeType) {
-            'application/pdf' => 'pdf',
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png',
-            default => null,
-        };
-
-        return $extension === null ? null : ['contents' => $contents, 'extension' => $extension];
     }
 
     public function messages(): array
