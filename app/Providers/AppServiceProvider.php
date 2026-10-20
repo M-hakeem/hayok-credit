@@ -120,16 +120,17 @@ class AppServiceProvider extends ServiceProvider
                             $idFile = $itemType->getProperty('id_file');
                             $idFileType = $idFile instanceof Schema ? $idFile->type : $idFile;
                             if ($idFileType instanceof Type) {
+                                $idFileType->format('binary')->contentMediaType('application/octet-stream');
                                 $idFileType->setDescription(
-                                    'Base64-encoded PDF, JPG, JPEG, or PNG file contents; max 5MB.'
+                                    'Multipart file upload (PDF, JPG, JPEG, or PNG); max 5MB.'
                                 );
                             }
                         } else {
                             $itemType->addProperty(
                                 'id_file',
                                 (new StringType)->setDescription(
-                                    'Base64-encoded PDF, JPG, JPEG, or PNG file contents; max 5MB.'
-                                )
+                                    'Multipart file upload (PDF, JPG, JPEG, or PNG); max 5MB.'
+                                )->format('binary')->contentMediaType('application/octet-stream')
                             );
                         }
 

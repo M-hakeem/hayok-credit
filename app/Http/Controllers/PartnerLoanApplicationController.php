@@ -8,7 +8,6 @@ use App\Models\LoanInterestSetting;
 use App\Models\Organisation;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -107,7 +106,7 @@ class PartnerLoanApplicationController extends Controller
                 // 3. Guarantors — create for new user; updateOrCreate by type if supplied; else use existing
                 $guarantors = [];
                 if (!empty($request->guarantors)) {
-                    foreach ($request->guarantors as $guarantorData) {
+                    foreach ($request->guarantors as $index => $guarantorData) {
                         $payload = array_filter([
                             'name'         => $guarantorData['name'],
                             'phone_number' => $guarantorData['phone_number'],
@@ -115,9 +114,17 @@ class PartnerLoanApplicationController extends Controller
                             'id_type'      => $guarantorData['id_type'] ?? null,
                         ], fn($v) => $v !== null);
 
-                        $idFile = $request->decodeGuarantorIdFile($guarantorData['id_file']);
-                        $idFilePath = 'guarantor_ids/'.Str::uuid().'.'.$idFile['extension'];
-                        if (! Storage::disk('public')->put($idFilePath, $idFile['contents'])) {
+                        $idFile = $request->file("guarantors.{$index}.id_file");
+                        if (!$idFile) {
+                            throw new \RuntimeException('Guarantor ID document is missing.');
+                        }
+
+                        $idFilePath = $idFile->storeAs(
+                            'guarantor_ids',
+                            Str::uuid().'.'.$idFile->extension(),
+                            'public'
+                        );
+                        if (! $idFilePath) {
                             throw new \RuntimeException('Failed to store guarantor ID document.');
                         }
                         $payload['id_file_path'] = $idFilePath;
