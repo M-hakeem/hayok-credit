@@ -16,7 +16,6 @@ use App\Http\Controllers\PartnerLoanApplicationController;
 use App\Http\Controllers\PaystackBankController;
 use App\Http\Controllers\PaystackPaymentController;
 use App\Http\Controllers\PaystackWebhookController;
-use App\Http\Controllers\TermiiDeliveryWebhookController;
 use App\Http\Controllers\Users\AuthController;
 use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\WalletController;
@@ -109,7 +108,6 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
 
 Route::get('paystack/banks', [PaystackBankController::class, 'index'])->middleware('throttle:30,1');
 Route::post('paystack/webhook', PaystackWebhookController::class);
-Route::post('webhooks/termii/delivery/{token}', TermiiDeliveryWebhookController::class)->middleware('throttle:60,1');
 
 // Partner integration endpoint — secured by X-Partner-Key header
 Route::middleware('partner')->prefix('partner')->group(function () {

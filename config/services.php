@@ -39,19 +39,18 @@ return [
         'api_key' => env('PARTNER_API_KEY'),
     ],
 
-    'termii' => [
-        'api_key' => env('TERMII_API_KEY'),
-        'base_url' => env('TERMII_BASE_URL', 'https://v3.api.termii.com'),
-        'sender_id' => env('TERMII_SENDER_ID'),
-        'whatsapp_sender_id' => env('TERMII_WHATSAPP_SENDER_ID'),
-        'sms_channel' => env('TERMII_SMS_CHANNEL', 'dnd'),
-        'whatsapp_channel' => env('TERMII_WHATSAPP_CHANNEL', 'whatsapp'),
-        'timeout' => (int) env('TERMII_TIMEOUT', 10),
-        'connect_timeout' => (int) env('TERMII_CONNECT_TIMEOUT', 5),
-        'otp_ttl_minutes' => (int) env('TERMII_OTP_TTL_MINUTES', 5),
-        'max_attempts' => (int) env('TERMII_OTP_MAX_ATTEMPTS', 5),
-        'otp_cache_store' => env('TERMII_OTP_CACHE_STORE', 'file'),
-        'webhook_token' => env('TERMII_WEBHOOK_TOKEN'),
+    'bulksmslive' => [
+        'email' => env('BULKSMSLIVE_EMAIL'),
+        'password' => env('BULKSMSLIVE_PASSWORD'),
+        'api_key' => env('BULKSMSLIVE_API_KEY'),
+        'sender_name' => env('BULKSMSLIVE_SENDER_NAME'),
+        'force_dnd' => (int) env('BULKSMSLIVE_FORCE_DND', 1),
+        'url' => env('BULKSMSLIVE_URL', 'https://api.bulksmslive.com/v2/app/sms'),
+        'api_key_url' => env('BULKSMSLIVE_API_KEY_URL', 'https://api.bulksmslive.com/v2/app/sendsms'),
+        'timeout' => (int) env('BULKSMSLIVE_TIMEOUT', 10),
+        'connect_timeout' => (int) env('BULKSMSLIVE_CONNECT_TIMEOUT', 5),
+        'otp_ttl_minutes' => (int) env('BULKSMSLIVE_OTP_TTL_MINUTES', 5),
+        'otp_max_attempts' => (int) env('BULKSMSLIVE_OTP_MAX_ATTEMPTS', 5),
     ],
 
     'insucare' => [

@@ -5,8 +5,6 @@ namespace Tests\Feature;
 use App\Models\PhoneVerification;
 use App\Models\User;
 use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Http\Client\Request as HttpRequest;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -18,43 +16,39 @@ class PhoneOtpTest extends TestCase
         parent::setUp();
 
         config([
-            'services.termii.api_key' => 'test-key',
-            'services.termii.base_url' => 'https://v3.api.termii.com',
-            'services.termii.sender_id' => 'HayokCredit',
-            'services.termii.whatsapp_sender_id' => 'HayokCredit',
-            'services.termii.webhook_token' => 'test-webhook-token',
-            'services.termii.otp_cache_store' => 'array',
+            'services.bulksmslive.email' => 'otp@example.test',
+            'services.bulksmslive.password' => 'test-password',
+            'services.bulksmslive.api_key' => null,
+            'services.bulksmslive.sender_name' => 'HayokCredit',
+            'services.bulksmslive.force_dnd' => 1,
+            'services.bulksmslive.url' => 'https://api.bulksmslive.com/v2/app/sms',
+            'services.bulksmslive.api_key_url' => 'https://api.bulksmslive.com/v2/app/sendsms',
         ]);
-        Cache::store('array')->flush();
     }
 
-    public function test_it_falls_back_to_whatsapp_with_the_same_hashed_otp(): void
+    public function test_it_sends_otp_using_bulksmslive_and_verifies_it(): void
     {
-        Http::fakeSequence()
-            ->push(['message' => 'SMS failed'], 503)
-            ->push(['message_id' => 'wa-message-1'], 200);
+        Http::fake(['*' => Http::response(['status' => 'success', 'message' => 'Queued'], 200)]);
 
         $response = $this->postJson('/api/auth/send-otp', ['phone' => '+234 706-123-4567']);
-        $requests = Http::recorded()->map(fn ($pair) => $pair[0]);
-        $smsText = $requests[0]['sms'];
-        $whatsAppText = $requests[1]['sms'];
-        preg_match('/(\d{6})$/', $smsText, $matches);
+        $request = Http::recorded()->first()[0];
+        $message = $request['message'];
+        preg_match('/(\d{6})$/', $message, $matches);
 
         $response->assertAccepted()
             ->assertJsonMissingPath('data')
             ->assertDontSee($matches[1]);
 
-        $this->assertSame($smsText, $whatsAppText);
-        $this->assertSame(
-            'https://v3.api.termii.com/api/sms/send',
-            Http::recorded()->first()[0]->url()
-        );
-        $this->assertSame('dnd', Http::recorded()->first()[0]['channel']);
-        $this->assertSame('whatsapp', Http::recorded()->last()[0]['channel']);
+        $this->assertSame('https://api.bulksmslive.com/v2/app/sms', $request->url());
+        $this->assertSame('otp@example.test', $request['email']);
+        $this->assertSame('test-password', $request['password']);
+        $this->assertSame('HayokCredit', $request['sender_name']);
+        $this->assertSame('2347061234567', $request['recipients']);
+        $this->assertSame(1, $request['forcednd']);
         $this->assertDatabaseHas('phone_verifications', [
             'phone_number' => '+2347061234567',
             'verified' => false,
-            'delivery_channel' => 'whatsapp',
+            'delivery_channel' => 'sms',
             'delivery_status' => 'sent',
         ]);
 
@@ -68,15 +62,13 @@ class PhoneOtpTest extends TestCase
         ])->assertOk()->assertJsonPath('status', 'success');
     }
 
-    public function test_it_skips_whatsapp_fallback_when_no_whatsapp_sender_is_configured(): void
+    public function test_provider_rejection_marks_otp_delivery_failed(): void
     {
-        config(['services.termii.whatsapp_sender_id' => null]);
-        Http::fake(['*' => Http::response(['message' => 'SMS rejected'], 422)]);
+        Http::fake(['*' => Http::response(['status' => 'error', 'message' => 'Invalid credentials'], 200)]);
 
         $this->postJson('/api/auth/send-otp', ['phone' => '+2347061234567'])->assertAccepted();
 
         $this->assertCount(1, Http::recorded());
-        $this->assertSame('dnd', Http::recorded()->first()[0]['channel']);
         $this->assertDatabaseHas('phone_verifications', [
             'phone_number' => '+2347061234567',
             'delivery_channel' => 'sms',
@@ -84,18 +76,37 @@ class PhoneOtpTest extends TestCase
         ]);
     }
 
+    public function test_it_uses_bulk_sms_live_api_key_authentication_when_configured(): void
+    {
+        config(['services.bulksmslive.api_key' => 'test-api-key']);
+        Http::fake(['*' => Http::response(['status' => 1, 'msg' => 'Message sent successful'], 200)]);
+
+        $this->postJson('/api/auth/send-otp', ['phone' => '+2347061234567'])->assertAccepted();
+
+        $request = Http::recorded()->first()[0];
+        $this->assertSame('https://api.bulksmslive.com/v2/app/sendsms', $request->url());
+        $this->assertSame('test-api-key', $request->header('Authorization')[0]);
+        $this->assertSame('application/json', $request->header('Accept')[0]);
+        $this->assertArrayNotHasKey('email', $request->data());
+        $this->assertArrayNotHasKey('password', $request->data());
+        $this->assertDatabaseHas('phone_verifications', [
+            'phone_number' => '+2347061234567',
+            'delivery_status' => 'sent',
+        ]);
+    }
+
     public function test_resend_replaces_the_previous_otp(): void
     {
         Http::fakeSequence()
-            ->push(['message_id' => 'sms-message-1'], 200)
-            ->push(['message_id' => 'sms-message-2'], 200);
+            ->push(['status' => 'success'], 200)
+            ->push(['status' => 'success'], 200);
 
         $this->postJson('/api/auth/send-otp', ['phone' => '+2347061234567'])->assertAccepted();
-        $oldText = Http::recorded()->first()[0]['sms'];
+        $oldText = Http::recorded()->first()[0]['message'];
         preg_match('/(\d{6})$/', $oldText, $oldMatches);
 
         $this->postJson('/api/auth/resend-otp', ['phone' => '+2347061234567'])->assertAccepted();
-        $newText = Http::recorded()->last()[0]['sms'];
+        $newText = Http::recorded()->last()[0]['message'];
         preg_match('/(\d{6})$/', $newText, $newMatches);
 
         $this->assertNotSame($oldMatches[1], $newMatches[1]);
@@ -113,19 +124,19 @@ class PhoneOtpTest extends TestCase
     {
         User::factory()->create(['phone_number' => '+2347061234567']);
         Http::fakeSequence()
-            ->push(['message_id' => 'reset-message-1'], 200)
-            ->push(['message_id' => 'reset-message-2'], 200);
+            ->push(['status' => 'success'], 200)
+            ->push(['status' => 'success'], 200);
 
         $this->postJson('/api/auth/forgot-password', [
             'phone_number' => '+2347061234567',
         ])->assertAccepted();
-        $oldText = Http::recorded()->first()[0]['sms'];
+        $oldText = Http::recorded()->first()[0]['message'];
         preg_match('/(\d{6})$/', $oldText, $oldMatches);
 
         $this->postJson('/api/auth/resend-otp', [
             'phone_number' => '+2347061234567',
         ])->assertAccepted();
-        $newText = Http::recorded()->last()[0]['sms'];
+        $newText = Http::recorded()->last()[0]['message'];
         preg_match('/(\d{6})$/', $newText, $newMatches);
 
         $this->assertNotSame($oldMatches[1], $newMatches[1]);
@@ -135,46 +146,18 @@ class PhoneOtpTest extends TestCase
         ]);
     }
 
-    public function test_undelivered_sms_callback_sends_the_same_code_on_whatsapp(): void
+    public function test_connection_failure_marks_otp_delivery_failed(): void
     {
-        Http::fakeSequence()
-            ->push(['message_id' => 'sms-message-callback'], 200)
-            ->push(['message_id' => 'wa-message-callback'], 200);
-
-        $this->postJson('/api/auth/send-otp', ['phone' => '+2347061234567'])->assertAccepted();
-        $smsText = Http::recorded()->first()[0]['sms'];
-
-        $this->postJson('/api/webhooks/termii/delivery/test-webhook-token', [
-            'message_id' => 'sms-message-callback',
-            'status' => 'undelivered',
-        ])->assertOk();
-
-        $this->assertSame($smsText, Http::recorded()->last()[0]['sms']);
-        $this->assertDatabaseHas('phone_verifications', [
-            'phone_number' => '+2347061234567',
-            'delivery_channel' => 'whatsapp',
-            'delivery_status' => 'sent',
-        ]);
-    }
-
-    public function test_connection_timeout_falls_back_to_whatsapp_with_the_same_otp(): void
-    {
-        $smsText = null;
-        Http::fake(function (HttpRequest $request) use (&$smsText) {
-            if ($request['channel'] === 'dnd') {
-                $smsText = $request['sms'];
-                throw new ConnectionException('Termii connection timed out.');
-            }
-
-            return Http::response(['message_id' => 'wa-timeout-fallback'], 200);
+        Http::fake(function () {
+            throw new ConnectionException('BulkSMSLive connection timed out.');
         });
 
         $this->postJson('/api/auth/send-otp', ['phone' => '+2347061234567'])->assertAccepted();
 
-        $whatsAppRequest = Http::recorded()->first()[0];
-        preg_match('/(\d{6})$/', $smsText, $matches);
-        $this->assertSame($smsText, $whatsAppRequest['sms']);
-        $this->assertSame('whatsapp', $whatsAppRequest['channel']);
-        $this->assertTrue(Hash::check($matches[1], PhoneVerification::firstOrFail()->otp_hash));
+        $this->assertDatabaseHas('phone_verifications', [
+            'phone_number' => '+2347061234567',
+            'delivery_channel' => 'sms',
+            'delivery_status' => 'failed',
+        ]);
     }
 }
