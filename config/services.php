@@ -39,18 +39,16 @@ return [
         'api_key' => env('PARTNER_API_KEY'),
     ],
 
-    'bulksmslive' => [
-        'email' => env('BULKSMSLIVE_EMAIL'),
-        'password' => env('BULKSMSLIVE_PASSWORD'),
-        'api_key' => env('BULKSMSLIVE_API_KEY'),
-        'sender_name' => env('BULKSMSLIVE_SENDER_NAME'),
-        'force_dnd' => (int) env('BULKSMSLIVE_FORCE_DND', 1),
-        'url' => env('BULKSMSLIVE_URL', 'https://api.bulksmslive.com/v2/app/sms'),
-        'api_key_url' => env('BULKSMSLIVE_API_KEY_URL', 'https://api.bulksmslive.com/v2/app/sendsms'),
-        'timeout' => (int) env('BULKSMSLIVE_TIMEOUT', 10),
-        'connect_timeout' => (int) env('BULKSMSLIVE_CONNECT_TIMEOUT', 5),
-        'otp_ttl_minutes' => (int) env('BULKSMSLIVE_OTP_TTL_MINUTES', 5),
-        'otp_max_attempts' => (int) env('BULKSMSLIVE_OTP_MAX_ATTEMPTS', 5),
+    'termii' => [
+        'api_key' => env('TERMII_API_KEY'),
+        'sender_id' => env('TERMII_SENDER_ID'),
+        'type' => env('TERMII_TYPE', 'plain'),
+        'channel' => env('TERMII_CHANNEL', 'generic'),
+        'url' => env('TERMII_URL', 'https://api.ng.termii.com/api/sms/send'),
+        'timeout' => (int) env('TERMII_TIMEOUT', 10),
+        'connect_timeout' => (int) env('TERMII_CONNECT_TIMEOUT', 5),
+        'otp_ttl_minutes' => (int) env('TERMII_OTP_TTL_MINUTES', 5),
+        'otp_max_attempts' => (int) env('TERMII_OTP_MAX_ATTEMPTS', 5),
     ],
 
     'insucare' => [

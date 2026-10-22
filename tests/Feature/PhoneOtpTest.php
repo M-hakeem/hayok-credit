@@ -16,35 +16,33 @@ class PhoneOtpTest extends TestCase
         parent::setUp();
 
         config([
-            'services.bulksmslive.email' => 'otp@example.test',
-            'services.bulksmslive.password' => 'test-password',
-            'services.bulksmslive.api_key' => null,
-            'services.bulksmslive.sender_name' => 'HayokCredit',
-            'services.bulksmslive.force_dnd' => 1,
-            'services.bulksmslive.url' => 'https://api.bulksmslive.com/v2/app/sms',
-            'services.bulksmslive.api_key_url' => 'https://api.bulksmslive.com/v2/app/sendsms',
+            'services.termii.api_key' => 'test-api-key',
+            'services.termii.sender_id' => 'HayokCredit',
+            'services.termii.type' => 'plain',
+            'services.termii.channel' => 'generic',
+            'services.termii.url' => 'https://api.ng.termii.com/api/sms/send',
         ]);
     }
 
-    public function test_it_sends_otp_using_bulksmslive_and_verifies_it(): void
+    public function test_it_sends_otp_using_termii_and_verifies_it(): void
     {
-        Http::fake(['*' => Http::response(['status' => 'success', 'message' => 'Queued'], 200)]);
+        Http::fake(['*' => Http::response(['code' => 'ok', 'message' => 'Successfully Sent'], 200)]);
 
         $response = $this->postJson('/api/auth/send-otp', ['phone' => '+234 706-123-4567']);
         $request = Http::recorded()->first()[0];
-        $message = $request['message'];
+        $message = $request['sms'];
         preg_match('/(\d{6})$/', $message, $matches);
 
         $response->assertAccepted()
             ->assertJsonMissingPath('data')
             ->assertDontSee($matches[1]);
 
-        $this->assertSame('https://api.bulksmslive.com/v2/app/sms', $request->url());
-        $this->assertSame('otp@example.test', $request['email']);
-        $this->assertSame('test-password', $request['password']);
-        $this->assertSame('HayokCredit', $request['sender_name']);
-        $this->assertSame('2347061234567', $request['recipients']);
-        $this->assertSame(1, $request['forcednd']);
+        $this->assertSame('https://api.ng.termii.com/api/sms/send', $request->url());
+        $this->assertSame('test-api-key', $request['api_key']);
+        $this->assertSame('HayokCredit', $request['from']);
+        $this->assertSame('2347061234567', $request['to']);
+        $this->assertSame('plain', $request['type']);
+        $this->assertSame('generic', $request['channel']);
         $this->assertDatabaseHas('phone_verifications', [
             'phone_number' => '+2347061234567',
             'verified' => false,
@@ -64,7 +62,7 @@ class PhoneOtpTest extends TestCase
 
     public function test_provider_rejection_marks_otp_delivery_failed(): void
     {
-        Http::fake(['*' => Http::response(['status' => 'error', 'message' => 'Invalid credentials'], 200)]);
+        Http::fake(['*' => Http::response(['code' => '401', 'message' => 'Invalid credentials'], 200)]);
 
         $this->postJson('/api/auth/send-otp', ['phone' => '+2347061234567'])->assertAccepted();
 
@@ -76,17 +74,14 @@ class PhoneOtpTest extends TestCase
         ]);
     }
 
-    public function test_it_uses_bulk_sms_live_api_key_authentication_when_configured(): void
+    public function test_termii_api_key_is_sent_in_the_request_body(): void
     {
-        config(['services.bulksmslive.api_key' => 'test-api-key']);
-        Http::fake(['*' => Http::response(['status' => 1, 'msg' => 'Message sent successful'], 200)]);
+        Http::fake(['*' => Http::response(['code' => 'ok', 'message' => 'Successfully Sent'], 200)]);
 
         $this->postJson('/api/auth/send-otp', ['phone' => '+2347061234567'])->assertAccepted();
 
         $request = Http::recorded()->first()[0];
-        $this->assertSame('https://api.bulksmslive.com/v2/app/sendsms', $request->url());
-        $this->assertSame('test-api-key', $request->header('Authorization')[0]);
-        $this->assertSame('application/json', $request->header('Accept')[0]);
+        $this->assertSame('test-api-key', $request['api_key']);
         $this->assertArrayNotHasKey('email', $request->data());
         $this->assertArrayNotHasKey('password', $request->data());
         $this->assertDatabaseHas('phone_verifications', [
@@ -95,20 +90,34 @@ class PhoneOtpTest extends TestCase
         ]);
     }
 
-    public function test_api_key_auth_uses_default_endpoint_when_api_key_url_is_missing(): void
+    public function test_termii_default_endpoint_is_used_when_url_is_missing(): void
     {
-        config([
-            'services.bulksmslive.api_key' => 'test-api-key',
-            'services.bulksmslive.api_key_url' => null,
-        ]);
-        Http::fake(['*' => Http::response(['status' => 1, 'msg' => 'Message sent successful'], 200)]);
+        config(['services.termii.url' => null]);
+        Http::fake(['*' => Http::response(['code' => 'ok'], 200)]);
 
         $this->postJson('/api/auth/send-otp', ['phone' => '+2347061234567'])->assertAccepted();
 
         $this->assertSame(
-            'https://api.bulksmslive.com/v2/app/sendsms',
+            'https://api.ng.termii.com/api/sms/send',
             Http::recorded()->first()[0]->url()
         );
+    }
+
+    public function test_missing_termii_credentials_does_not_make_a_request(): void
+    {
+        config([
+            'services.termii.api_key' => null,
+            'services.termii.sender_id' => null,
+        ]);
+        Http::fake();
+
+        $this->postJson('/api/auth/send-otp', ['phone' => '+2347061234567'])->assertAccepted();
+
+        $this->assertCount(0, Http::recorded());
+        $this->assertDatabaseHas('phone_verifications', [
+            'phone_number' => '+2347061234567',
+            'delivery_status' => 'failed',
+        ]);
     }
 
     public function test_resend_replaces_the_previous_otp(): void
@@ -118,11 +127,11 @@ class PhoneOtpTest extends TestCase
             ->push(['status' => 'success'], 200);
 
         $this->postJson('/api/auth/send-otp', ['phone' => '+2347061234567'])->assertAccepted();
-        $oldText = Http::recorded()->first()[0]['message'];
+        $oldText = Http::recorded()->first()[0]['sms'];
         preg_match('/(\d{6})$/', $oldText, $oldMatches);
 
         $this->postJson('/api/auth/resend-otp', ['phone' => '+2347061234567'])->assertAccepted();
-        $newText = Http::recorded()->last()[0]['message'];
+        $newText = Http::recorded()->last()[0]['sms'];
         preg_match('/(\d{6})$/', $newText, $newMatches);
 
         $this->assertNotSame($oldMatches[1], $newMatches[1]);
@@ -146,13 +155,13 @@ class PhoneOtpTest extends TestCase
         $this->postJson('/api/auth/forgot-password', [
             'phone_number' => '+2347061234567',
         ])->assertAccepted();
-        $oldText = Http::recorded()->first()[0]['message'];
+        $oldText = Http::recorded()->first()[0]['sms'];
         preg_match('/(\d{6})$/', $oldText, $oldMatches);
 
         $this->postJson('/api/auth/resend-otp', [
             'phone_number' => '+2347061234567',
         ])->assertAccepted();
-        $newText = Http::recorded()->last()[0]['message'];
+        $newText = Http::recorded()->last()[0]['sms'];
         preg_match('/(\d{6})$/', $newText, $newMatches);
 
         $this->assertNotSame($oldMatches[1], $newMatches[1]);
@@ -165,7 +174,7 @@ class PhoneOtpTest extends TestCase
     public function test_connection_failure_marks_otp_delivery_failed(): void
     {
         Http::fake(function () {
-            throw new ConnectionException('BulkSMSLive connection timed out.');
+            throw new ConnectionException('Termii connection timed out.');
         });
 
         $this->postJson('/api/auth/send-otp', ['phone' => '+2347061234567'])->assertAccepted();

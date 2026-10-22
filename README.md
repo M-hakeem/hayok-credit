@@ -52,6 +52,24 @@ In order to ensure that the Laravel community is welcoming to all, please review
 
 ## Security Vulnerabilities
 
+## Termii OTP SMS Configuration
+
+Configure the Termii API key and an approved sender ID in the backend `.env`:
+
+```env
+TERMII_API_KEY=
+TERMII_SENDER_ID=
+TERMII_TYPE=plain
+TERMII_CHANNEL=generic
+TERMII_URL=https://api.ng.termii.com/api/sms/send
+TERMII_TIMEOUT=10
+TERMII_CONNECT_TIMEOUT=5
+TERMII_OTP_TTL_MINUTES=5
+TERMII_OTP_MAX_ATTEMPTS=5
+```
+
+The OTP service sends SMS messages through Termii's `/api/sms/send` endpoint. Set `TERMII_API_KEY` and `TERMII_SENDER_ID` to the credentials and sender ID configured in Termii before enabling OTP delivery.
+
 ## Paystack Configuration
 
 Set the server-only credentials in `.env`:
