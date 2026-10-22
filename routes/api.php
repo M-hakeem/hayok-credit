@@ -6,6 +6,7 @@ use App\Http\Controllers\ClaimifyWalletController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmploymentController;
 use App\Http\Controllers\FirstCentralController;
+use App\Http\Controllers\FirstLoanLimitController;
 use App\Http\Controllers\GuarantorController;
 use App\Http\Controllers\LoanController;
 use App\Http\Controllers\LoanDisbursementController;
@@ -59,6 +60,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::get('payments/paystack/card-status', [PaystackPaymentController::class, 'cardStatus']);
     Route::get('payment-authorizations', [PaystackPaymentController::class, 'authorizations']);
     Route::delete('payment-authorizations/{paymentAuthorization}', [PaystackPaymentController::class, 'revoke']);
+    Route::get('first-loan-limit', [FirstLoanLimitController::class, 'eligibility']);
 
     // Loan routes must come before the {id} wildcard
     Route::prefix('loans')->group(function () {
@@ -78,6 +80,8 @@ Route::middleware('auth:sanctum')->get('loan-interest', [LoanInterestSettingCont
 
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
+    Route::get('first-loan-limit', [FirstLoanLimitController::class, 'show']);
+    Route::put('first-loan-limit', [FirstLoanLimitController::class, 'update']);
     Route::get('users/{id}/wallet', [UserController::class, 'wallet']);
     Route::get('business-loan-applications', [BusinessLoanApplicationController::class, 'index']);
     Route::get('business-loan-applications/{businessLoanApplication}', [BusinessLoanApplicationController::class, 'show']);
