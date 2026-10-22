@@ -95,6 +95,22 @@ class PhoneOtpTest extends TestCase
         ]);
     }
 
+    public function test_api_key_auth_uses_default_endpoint_when_api_key_url_is_missing(): void
+    {
+        config([
+            'services.bulksmslive.api_key' => 'test-api-key',
+            'services.bulksmslive.api_key_url' => null,
+        ]);
+        Http::fake(['*' => Http::response(['status' => 1, 'msg' => 'Message sent successful'], 200)]);
+
+        $this->postJson('/api/auth/send-otp', ['phone' => '+2347061234567'])->assertAccepted();
+
+        $this->assertSame(
+            'https://api.bulksmslive.com/v2/app/sendsms',
+            Http::recorded()->first()[0]->url()
+        );
+    }
+
     public function test_resend_replaces_the_previous_otp(): void
     {
         Http::fakeSequence()

@@ -83,6 +83,15 @@ Due installments are charged with Paystack authorization codes, retried accordin
 
 Before production, configure live keys, webhook delivery over HTTPS, queue supervision, scheduler supervision, Paystack transfer capability, sufficient Paystack balance, and alerting for failed repayments and transfers. Test all flows with Paystack test mode and HTTP-faked automated tests before switching keys.
 
+## First-time borrower loan limit
+
+An administrator configures the maximum NGN amount a borrower with no previous loan record can request:
+
+- `GET /api/admin/first-loan-limit` reads the current setting.
+- `PUT /api/admin/first-loan-limit` saves `{ "amount": 25000 }` (NGN 100 to NGN 9,999,999.99).
+
+Both admin endpoints require an authenticated admin Sanctum token. The mobile app can read the authenticated user's entitlement with `GET /api/user/first-loan-limit`. Its `data` object includes `is_first_time_user`, `maximum_amount`, `configured`, and `currency`. `maximum_amount` is `null` for borrowers with prior loan history or when the limit has not been configured. The loan application endpoint also enforces the configured cap server-side; applications by first-time borrowers are blocked until an administrator sets it.
+
 If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
 
 ## License

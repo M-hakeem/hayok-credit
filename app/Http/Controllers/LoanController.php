@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreLoanRequest;
+use App\Models\FirstLoanLimit;
 use App\Models\Loan;
 use App\Models\LoanDisbursement;
 use App\Models\LoanInterestSetting;
@@ -47,6 +48,24 @@ class LoanController extends Controller
                 'status' => 'error',
                 'message' => 'You already have an active loan. Please complete your current loan before applying for a new one.',
             ], 422);
+        }
+
+        if (! $user->loans()->withTrashed()->exists()) {
+            $firstLoanLimit = FirstLoanLimit::query()->find(1);
+
+            if ($firstLoanLimit?->amount === null) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'The first-loan request limit has not been configured. Please contact the administrator.',
+                ], 422);
+            }
+
+            if ((float) $request->amount_requested > (float) $firstLoanLimit->amount) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'First-time users can request a maximum of NGN '.number_format((float) $firstLoanLimit->amount, 2).'.',
+                ], 422);
+            }
         }
 
         $termMonths = $request->term_months;

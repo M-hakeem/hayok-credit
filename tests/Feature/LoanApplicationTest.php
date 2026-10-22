@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\FirstLoanLimit;
 use App\Models\LoanInterestSetting;
 use App\Models\User;
 use Tests\TestCase;
@@ -19,6 +20,7 @@ class LoanApplicationTest extends TestCase
         ]);
         $user->wallet()->create(['balance' => 0, 'currency' => 'NGN']);
         LoanInterestSetting::create(['interest_rate' => 5, 'tenure_months' => 2, 'active' => true]);
+        FirstLoanLimit::create(['id' => 1, 'amount' => 100000]);
 
         $this->actingAs($user, 'sanctum')
             ->postJson('/api/user/loans', [
@@ -44,6 +46,7 @@ class LoanApplicationTest extends TestCase
             'role' => 'user',
         ]);
         LoanInterestSetting::create(['interest_rate' => 10, 'tenure_months' => 6, 'active' => true]);
+        FirstLoanLimit::create(['id' => 1, 'amount' => 100000]);
 
         $this->actingAs($user, 'sanctum')
             ->postJson('/api/user/loans', [

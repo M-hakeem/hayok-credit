@@ -111,7 +111,13 @@ class BulkSmsLiveOtpService
             $payload['email'] = config('services.bulksmslive.email');
             $payload['password'] = config('services.bulksmslive.password');
         }
-        $url = config($usingApiKey ? 'services.bulksmslive.api_key_url' : 'services.bulksmslive.url');
+        $configuredUrl = config($usingApiKey ? 'services.bulksmslive.api_key_url' : 'services.bulksmslive.url');
+        $defaultUrl = $usingApiKey
+            ? 'https://api.bulksmslive.com/v2/app/sendsms'
+            : 'https://api.bulksmslive.com/v2/app/sms';
+        $url = is_string($configuredUrl) && trim($configuredUrl) !== ''
+            ? trim($configuredUrl)
+            : $defaultUrl;
 
         try {
             $request = Http::asJson()
