@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class BulkSmsLiveOtpService
+class TermiiOtpService
 {
     public function normalizePhone(string $phone): string
     {
@@ -21,7 +21,7 @@ class BulkSmsLiveOtpService
     {
         $phone = $this->normalizePhone($phone);
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        $expiresAt = now()->addMinutes(config('services.bulksmslive.otp_ttl_minutes', 5));
+        $expiresAt = now()->addMinutes(config('services.termii.otp_ttl_minutes', 5));
 
         $verification = PhoneVerification::withTrashed()->firstOrNew(['phone_number' => $phone]);
         if ($verification->exists && $verification->trashed()) {
@@ -60,14 +60,14 @@ class BulkSmsLiveOtpService
             return 'invalid';
         }
 
-        if ($verification->attempt_count >= config('services.bulksmslive.otp_max_attempts', 5)) {
+        if ($verification->attempt_count >= config('services.termii.otp_max_attempts', 5)) {
             return 'too_many_attempts';
         }
 
         if (! preg_match('/^\d{6}$/', $otp) || ! Hash::check($otp, $verification->otp_hash)) {
             $verification->increment('attempt_count');
 
-            return $verification->fresh()->attempt_count >= config('services.bulksmslive.otp_max_attempts', 5)
+            return $verification->fresh()->attempt_count >= config('services.termii.otp_max_attempts', 5)
                 ? 'too_many_attempts'
                 : 'invalid';
         }
@@ -99,39 +99,38 @@ class BulkSmsLiveOtpService
 
     private function send(string $phone, string $otp): bool
     {
-        $apiKey = config('services.bulksmslive.api_key');
-        $usingApiKey = is_string($apiKey) && trim($apiKey) !== '';
-        $payload = [
-            'message' => 'Your Hayok Credit verification code is '.$otp,
-            'sender_name' => config('services.bulksmslive.sender_name'),
-            'recipients' => ltrim($phone, '+'),
-            'forcednd' => config('services.bulksmslive.force_dnd', 1),
-        ];
-        if (! $usingApiKey) {
-            $payload['email'] = config('services.bulksmslive.email');
-            $payload['password'] = config('services.bulksmslive.password');
+        $apiKey = config('services.termii.api_key');
+        $senderId = config('services.termii.sender_id');
+        if (! is_string($apiKey) || trim($apiKey) === '' || ! is_string($senderId) || trim($senderId) === '') {
+            Log::warning('Termii SMS request is missing required configuration', [
+                'api_key_configured' => is_string($apiKey) && trim($apiKey) !== '',
+                'sender_id_configured' => is_string($senderId) && trim($senderId) !== '',
+            ]);
+
+            return false;
         }
-        $configuredUrl = config($usingApiKey ? 'services.bulksmslive.api_key_url' : 'services.bulksmslive.url');
-        $defaultUrl = $usingApiKey
-            ? 'https://api.bulksmslive.com/v2/app/sendsms'
-            : 'https://api.bulksmslive.com/v2/app/sms';
+
+        $payload = [
+            'api_key' => $apiKey,
+            'to' => ltrim($phone, '+'),
+            'from' => $senderId,
+            'sms' => 'Your Hayok Credit verification code is '.$otp,
+            'type' => config('services.termii.type', 'plain'),
+            'channel' => config('services.termii.channel', 'generic'),
+        ];
+        $configuredUrl = config('services.termii.url');
         $url = is_string($configuredUrl) && trim($configuredUrl) !== ''
             ? trim($configuredUrl)
-            : $defaultUrl;
+            : 'https://api.ng.termii.com/api/sms/send';
 
         try {
             $request = Http::asJson()
-                ->connectTimeout(config('services.bulksmslive.connect_timeout', 5))
-                ->timeout(config('services.bulksmslive.timeout', 10));
-            if ($usingApiKey) {
-                $request = $request->withHeaders([
-                    'Authorization' => $apiKey,
-                    'Accept' => 'application/json',
-                ]);
-            }
+                ->acceptJson()
+                ->connectTimeout(config('services.termii.connect_timeout', 5))
+                ->timeout(config('services.termii.timeout', 10));
             $response = $request->post($url, $payload);
         } catch (ConnectionException $exception) {
-            Log::warning('BulkSMSLive message request connection failed', [
+            Log::warning('Termii SMS request connection failed', [
                 'host' => parse_url((string) $url, PHP_URL_HOST) ?: 'unknown',
                 'exception' => $exception->getMessage(),
             ]);
@@ -140,17 +139,14 @@ class BulkSmsLiveOtpService
         }
 
         $body = $response->json();
-        $providerStatus = is_array($body) ? strtolower((string) ($body['status'] ?? '')) : '';
+        $providerCode = is_array($body) ? strtolower((string) ($body['code'] ?? '')) : '';
         $accepted = $response->successful()
             && is_array($body)
-            && (
-                ($body['success'] ?? null) === true
-                || in_array($providerStatus, ['1', 'success', 'successful', 'sent', 'queued', 'ok', '200'], true)
-            );
+            && $providerCode === 'ok';
 
         if (! $accepted) {
             $providerMessage = is_array($body) ? ($body['message'] ?? $body['error'] ?? null) : null;
-            Log::warning('BulkSMSLive message request was not accepted', [
+            Log::warning('Termii SMS request was not accepted', [
                 'host' => parse_url((string) $url, PHP_URL_HOST) ?: 'unknown',
                 'http_status' => $response->status(),
                 'provider_message' => is_string($providerMessage) ? substr($providerMessage, 0, 300) : null,

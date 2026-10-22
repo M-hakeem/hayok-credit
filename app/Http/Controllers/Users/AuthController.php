@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Users;
 use App\Http\Controllers\Controller;
 use App\Models\PhoneVerification;
 use App\Models\User;
-use App\Services\BulkSmsLiveOtpService;
+use App\Services\TermiiOtpService;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -29,7 +29,7 @@ class AuthController extends Controller
      * Store a newly created resource in storage.
      */
     #[BodyParameter('phone', type: 'string', required: true, description: 'Phone number to send OTP to (e.g. +2347061234567)')]
-    public function sendPhoneOtp(Request $request, BulkSmsLiveOtpService $otpService)
+    public function sendPhoneOtp(Request $request, TermiiOtpService $otpService)
     {
         $request->validate([
             'phone' => 'required|string|min:8|max:24',
@@ -47,7 +47,7 @@ class AuthController extends Controller
         ], 202);
     }
 
-    public function resendPhoneOtp(Request $request, BulkSmsLiveOtpService $otpService)
+    public function resendPhoneOtp(Request $request, TermiiOtpService $otpService)
     {
         $request->validate([
             'phone' => 'required_without:phone_number|string|min:8|max:24',
@@ -74,7 +74,7 @@ class AuthController extends Controller
     // 2️⃣ Verify OTP
     #[BodyParameter('phone', type: 'string', required: true, description: 'Phone number the OTP was sent to')]
     #[BodyParameter('pin', type: 'string', required: true, description: 'The 6-digit OTP code sent to the phone')]
-    public function verifyPhoneOtp(Request $request, BulkSmsLiveOtpService $otpService)
+    public function verifyPhoneOtp(Request $request, TermiiOtpService $otpService)
     {
         $request->validate([
             'phone' => 'required|string|min:8|max:24',
@@ -100,7 +100,7 @@ class AuthController extends Controller
     #[BodyParameter('phone_number', type: 'string', required: true, description: 'Verified phone number')]
     #[BodyParameter('password', type: 'string', required: true, description: 'Password (min 6 characters)')]
     #[BodyParameter('password_confirmation', type: 'string', required: true, description: 'Must match the password field')]
-    public function setPassword(Request $request, BulkSmsLiveOtpService $otpService)
+    public function setPassword(Request $request, TermiiOtpService $otpService)
     {
         $request->validate([
             'phone_number' => 'required|string',
@@ -220,7 +220,7 @@ class AuthController extends Controller
 
     // 4️⃣ Forgot password — send OTP to a registered phone
     #[BodyParameter('phone_number', type: 'string', required: true, description: 'Registered phone number to reset the password for')]
-    public function forgotPassword(Request $request, BulkSmsLiveOtpService $otpService)
+    public function forgotPassword(Request $request, TermiiOtpService $otpService)
     {
         $request->validate([
             'phone_number' => 'required|string',
@@ -242,7 +242,7 @@ class AuthController extends Controller
     #[BodyParameter('phone_number', type: 'string', required: true, description: 'Verified phone number')]
     #[BodyParameter('password', type: 'string', required: true, description: 'New password (min 6 characters)')]
     #[BodyParameter('password_confirmation', type: 'string', required: true, description: 'Must match the password field')]
-    public function resetPassword(Request $request, BulkSmsLiveOtpService $otpService)
+    public function resetPassword(Request $request, TermiiOtpService $otpService)
     {
         $request->validate([
             'phone_number' => 'required|string',
