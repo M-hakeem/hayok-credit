@@ -91,6 +91,115 @@ class AppServiceProvider extends ServiceProvider
 
             foreach ($openApi->paths as $path) {
                 foreach ($path->operations as $operation) {
+                    if ($operation->operationId === 'businessLoanApplication.store' && $operation->requestBodyObject) {
+                        $documentTypes = [
+                            'account_owner_identity_document',
+                            'account_owner_address_proof',
+                            'account_owner_passport_photograph',
+                            'certificate_of_incorporation',
+                            'memorandum_and_articles',
+                            'directors_status_report',
+                            'business_address_proof',
+                            'tin_certificate',
+                            'board_resolution',
+                            'financial_statements',
+                            'bank_statements',
+                        ];
+
+                        foreach ($operation->requestBodyObject->content as $requestSchema) {
+                            $requestSchema = $requestSchema instanceof Reference
+                                ? $requestSchema->resolve()
+                                : $requestSchema;
+
+                            if (! $requestSchema instanceof Schema || ! $requestSchema->type instanceof ObjectType) {
+                                continue;
+                            }
+
+                            $source = $requestSchema->type;
+                            $flattened = new ObjectType;
+                            $flattened->setDescription(
+                                'For multipart/form-data, use the bracketed field names shown below. Swagger UI provides one stakeholder and all 11 required documents; additional stakeholders can be added with the same indexed field format.'
+                            );
+
+                            $flatten = function (string $name, Type $type, bool $required) use (&$flatten, $flattened, $documentTypes): void {
+                                if ($type instanceof ObjectType) {
+                                    foreach ($type->properties as $propertyName => $propertyType) {
+                                        if ($propertyType instanceof Type) {
+                                            $flatten(
+                                                "{$name}[{$propertyName}]",
+                                                $propertyType,
+                                                $required && in_array($propertyName, $type->required, true),
+                                            );
+                                        }
+                                    }
+
+                                    return;
+                                }
+
+                                if ($type instanceof ArrayType) {
+                                    $itemType = $type->items instanceof Schema
+                                        ? $type->items->type
+                                        : $type->items;
+
+                                    if ($itemType instanceof ObjectType) {
+                                        $itemCount = $name === 'documents' ? count($documentTypes) : 1;
+
+                                        for ($index = 0; $index < $itemCount; $index++) {
+                                            foreach ($itemType->properties as $propertyName => $propertyType) {
+                                                if (! $propertyType instanceof Type) {
+                                                    continue;
+                                                }
+
+                                                $fieldName = "{$name}[{$index}][{$propertyName}]";
+                                                $fieldRequired = $required && in_array($propertyName, $itemType->required, true);
+                                                if ($name === 'documents' && $propertyName === 'type') {
+                                                    $propertyType = (new StringType)
+                                                        ->enum([$documentTypes[$index]])
+                                                        ->setDescription("Required document type: {$documentTypes[$index]}.");
+                                                    $fieldRequired = $required;
+                                                }
+
+                                                $flatten($fieldName, $propertyType, $fieldRequired);
+                                            }
+                                        }
+
+                                        return;
+                                    }
+
+                                    if ($itemType instanceof Type) {
+                                        $flatten("{$name}[0]", $itemType, $required);
+                                    }
+
+                                    return;
+                                }
+
+                                $flattened->addProperty($name, $type);
+                                if ($required) {
+                                    $flattened->addRequired([$name]);
+                                }
+                            };
+
+                            foreach ($source->properties as $propertyName => $propertyType) {
+                                if (! $propertyType instanceof Type) {
+                                    continue;
+                                }
+
+                                if ($propertyName === 'consent') {
+                                    $propertyType = (new StringType)
+                                        ->enum(['true', '1', 'yes', 'on'])
+                                        ->setDescription('Confirm consent by selecting true, 1, yes, or on.');
+                                }
+
+                                $flatten($propertyName, $propertyType, in_array($propertyName, $source->required, true));
+                            }
+
+                            $flattened->addRequired(['consent']);
+                            $requestSchema->type = $flattened;
+                        }
+
+                        continue;
+                    }
+
                     if ($operation->operationId !== 'partnerLoanApplication.store' || ! $operation->requestBodyObject) {
                         continue;
                     }

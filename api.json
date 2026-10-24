@@ -9039,6 +9039,7 @@
             },
             "StoreBusinessLoanApplicationRequest": {
                 "type": "object",
+                "description": "For multipart/form-data, use the bracketed field names shown below. Swagger UI provides one stakeholder and all 11 required documents; additional stakeholders can be added with the same indexed field format.",
                 "properties": {
                     "nature_of_business": {
                         "type": "string",
@@ -9061,357 +9062,475 @@
                         "maxLength": 1000
                     },
                     "consent": {
+                        "type": "string",
+                        "description": "Confirm consent by selecting true, 1, yes, or on.",
+                        "enum": [
+                            "true",
+                            "1",
+                            "yes",
+                            "on"
+                        ]
+                    },
+                    "business[registered_name]": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "business[trading_name]": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "business[registration_number]": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "business[type]": {
+                        "type": "string",
+                        "enum": [
+                            "limited_liability_company",
+                            "sole_proprietorship",
+                            "partnership",
+                            "ngo",
+                            "public_company"
+                        ]
+                    },
+                    "business[industry]": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "business[incorporation_date]": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "business[registration_country]": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "business[registration_state]": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "business[registered_office_address]": {
+                        "type": "string",
+                        "minLength": 10
+                    },
+                    "business[operating_address]": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "minLength": 10
+                    },
+                    "business[website]": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uri",
+                        "maxLength": 255
+                    },
+                    "business[social_handles][0]": {
                         "type": "string"
                     },
-                    "business": {
-                        "type": "object",
-                        "properties": {
-                            "registered_name": {
-                                "type": "string",
-                                "maxLength": 255
-                            },
-                            "trading_name": {
-                                "type": [
-                                    "string",
-                                    "null"
-                                ],
-                                "maxLength": 255
-                            },
-                            "registration_number": {
-                                "type": "string",
-                                "maxLength": 100
-                            },
-                            "type": {
-                                "type": "string",
-                                "enum": [
-                                    "limited_liability_company",
-                                    "sole_proprietorship",
-                                    "partnership",
-                                    "ngo",
-                                    "public_company"
-                                ]
-                            },
-                            "industry": {
-                                "type": "string",
-                                "maxLength": 255
-                            },
-                            "incorporation_date": {
-                                "type": "string",
-                                "format": "date-time"
-                            },
-                            "registration_country": {
-                                "type": "string",
-                                "maxLength": 100
-                            },
-                            "registration_state": {
-                                "type": "string",
-                                "maxLength": 100
-                            },
-                            "registered_office_address": {
-                                "type": "string",
-                                "minLength": 10
-                            },
-                            "operating_address": {
-                                "type": [
-                                    "string",
-                                    "null"
-                                ],
-                                "minLength": 10
-                            },
-                            "website": {
-                                "type": [
-                                    "string",
-                                    "null"
-                                ],
-                                "format": "uri",
-                                "maxLength": 255
-                            },
-                            "social_handles": {
-                                "type": [
-                                    "array",
-                                    "null"
-                                ],
-                                "items": {
-                                    "type": "string"
-                                }
-                            },
-                            "tin": {
-                                "type": "string",
-                                "maxLength": 100
-                            },
-                            "email": {
-                                "type": "string",
-                                "format": "email",
-                                "maxLength": 255
-                            },
-                            "phone": {
-                                "type": "string",
-                                "maxLength": 20
-                            }
-                        },
-                        "required": [
-                            "registered_name",
-                            "registration_number",
-                            "type",
-                            "industry",
-                            "incorporation_date",
-                            "registration_country",
-                            "registration_state",
-                            "registered_office_address",
-                            "tin",
-                            "email",
-                            "phone"
+                    "business[tin]": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "business[email]": {
+                        "type": "string",
+                        "format": "email",
+                        "maxLength": 255
+                    },
+                    "business[phone]": {
+                        "type": "string",
+                        "maxLength": 20
+                    },
+                    "account_owner[first_name]": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "account_owner[last_name]": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "account_owner[date_of_birth]": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "account_owner[gender]": {
+                        "type": "string",
+                        "enum": [
+                            "male",
+                            "female"
                         ]
                     },
-                    "account_owner": {
-                        "type": "object",
-                        "properties": {
-                            "first_name": {
-                                "type": "string",
-                                "maxLength": 100
-                            },
-                            "last_name": {
-                                "type": "string",
-                                "maxLength": 100
-                            },
-                            "date_of_birth": {
-                                "type": "string",
-                                "format": "date-time"
-                            },
-                            "gender": {
-                                "type": "string",
-                                "enum": [
-                                    "male",
-                                    "female"
-                                ]
-                            },
-                            "nationality": {
-                                "type": "string",
-                                "maxLength": 100
-                            },
-                            "identification_type": {
-                                "type": "string",
-                                "enum": [
-                                    "BVN",
-                                    "NIN"
-                                ]
-                            },
-                            "identification_number": {
-                                "type": "string",
-                                "maxLength": 50
-                            },
-                            "government_id_number": {
-                                "type": "string",
-                                "maxLength": 100
-                            },
-                            "government_id_expires_at": {
-                                "type": "string",
-                                "format": "date-time"
-                            },
-                            "phone": {
-                                "type": "string",
-                                "maxLength": 20
-                            },
-                            "email": {
-                                "type": "string",
-                                "format": "email",
-                                "maxLength": 255
-                            },
-                            "residential_address": {
-                                "type": "string",
-                                "minLength": 10
-                            },
-                            "shareholding_percentage": {
-                                "type": "number",
-                                "minimum": 0,
-                                "maximum": 100
-                            },
-                            "role": {
-                                "type": "string",
-                                "maxLength": 100
-                            }
-                        },
-                        "required": [
-                            "first_name",
-                            "last_name",
-                            "date_of_birth",
-                            "gender",
-                            "nationality",
-                            "identification_type",
-                            "identification_number",
-                            "government_id_number",
-                            "government_id_expires_at",
-                            "phone",
-                            "email",
-                            "residential_address",
-                            "shareholding_percentage",
-                            "role"
+                    "account_owner[nationality]": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "account_owner[identification_type]": {
+                        "type": "string",
+                        "enum": [
+                            "BVN",
+                            "NIN"
                         ]
                     },
-                    "loan": {
-                        "type": "object",
-                        "properties": {
-                            "amount_requested": {
-                                "type": "number",
-                                "minimum": 100
-                            },
-                            "term_months": {
-                                "type": "integer",
-                                "minimum": 1,
-                                "maximum": 60
-                            },
-                            "purpose": {
-                                "type": "string",
-                                "maxLength": 1000
-                            },
-                            "existing_debt_obligations": {
-                                "type": [
-                                    "string",
-                                    "null"
-                                ],
-                                "maxLength": 5000
-                            },
-                            "repayment_plan": {
-                                "type": "string",
-                                "maxLength": 2000
-                            },
-                            "collateral_details": {
-                                "type": [
-                                    "string",
-                                    "null"
-                                ],
-                                "maxLength": 5000
-                            }
-                        },
-                        "required": [
-                            "amount_requested",
-                            "term_months",
-                            "purpose",
-                            "repayment_plan"
+                    "account_owner[identification_number]": {
+                        "type": "string",
+                        "maxLength": 50
+                    },
+                    "account_owner[government_id_number]": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "account_owner[government_id_expires_at]": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "account_owner[phone]": {
+                        "type": "string",
+                        "maxLength": 20
+                    },
+                    "account_owner[email]": {
+                        "type": "string",
+                        "format": "email",
+                        "maxLength": 255
+                    },
+                    "account_owner[residential_address]": {
+                        "type": "string",
+                        "minLength": 10
+                    },
+                    "account_owner[shareholding_percentage]": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                    },
+                    "account_owner[role]": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "loan[amount_requested]": {
+                        "type": "number",
+                        "minimum": 100
+                    },
+                    "loan[term_months]": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 60
+                    },
+                    "loan[purpose]": {
+                        "type": "string",
+                        "maxLength": 1000
+                    },
+                    "loan[existing_debt_obligations]": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 5000
+                    },
+                    "loan[repayment_plan]": {
+                        "type": "string",
+                        "maxLength": 2000
+                    },
+                    "loan[collateral_details]": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 5000
+                    },
+                    "stakeholders[0][full_name]": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "stakeholders[0][date_of_birth]": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "stakeholders[0][gender]": {
+                        "type": "string",
+                        "enum": [
+                            "male",
+                            "female"
                         ]
                     },
-                    "stakeholders": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "full_name": {
-                                    "type": "string",
-                                    "maxLength": 255
-                                },
-                                "date_of_birth": {
-                                    "type": "string",
-                                    "format": "date-time"
-                                },
-                                "gender": {
-                                    "type": "string",
-                                    "enum": [
-                                        "male",
-                                        "female"
-                                    ]
-                                },
-                                "nationality": {
-                                    "type": "string",
-                                    "maxLength": 100
-                                },
-                                "identification_type": {
-                                    "type": "string",
-                                    "enum": [
-                                        "BVN",
-                                        "NIN"
-                                    ]
-                                },
-                                "identification_number": {
-                                    "type": "string",
-                                    "maxLength": 50
-                                },
-                                "identification_expires_at": {
-                                    "type": [
-                                        "string",
-                                        "null"
-                                    ],
-                                    "format": "date-time"
-                                },
-                                "residential_address": {
-                                    "type": "string",
-                                    "minLength": 10
-                                },
-                                "shareholding_percentage": {
-                                    "type": "number",
-                                    "minimum": 0,
-                                    "maximum": 100
-                                },
-                                "role": {
-                                    "type": "string",
-                                    "enum": [
-                                        "director",
-                                        "shareholder",
-                                        "signatory",
-                                        "beneficial_owner"
-                                    ]
-                                },
-                                "is_pep": {
-                                    "type": "boolean"
-                                },
-                                "identity_document": {
-                                    "type": "string",
-                                    "format": "binary",
-                                    "contentMediaType": "application/octet-stream",
-                                    "maxLength": 10240
-                                },
-                                "proof_of_address": {
-                                    "type": "string",
-                                    "format": "binary",
-                                    "contentMediaType": "application/octet-stream",
-                                    "maxLength": 10240
-                                }
-                            },
-                            "required": [
-                                "full_name",
-                                "date_of_birth",
-                                "gender",
-                                "nationality",
-                                "identification_type",
-                                "identification_number",
-                                "residential_address",
-                                "shareholding_percentage",
-                                "role",
-                                "is_pep",
-                                "identity_document",
-                                "proof_of_address"
-                            ]
-                        },
-                        "minItems": 1
+                    "stakeholders[0][nationality]": {
+                        "type": "string",
+                        "maxLength": 100
                     },
-                    "documents": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "type": {
-                                    "type": "string",
-                                    "maxLength": 100
-                                },
-                                "file": {
-                                    "type": "string",
-                                    "format": "binary",
-                                    "contentMediaType": "application/octet-stream",
-                                    "maxLength": 10240
-                                },
-                                "expires_at": {
-                                    "type": [
-                                        "string",
-                                        "null"
-                                    ],
-                                    "format": "date-time"
-                                }
-                            },
-                            "required": [
-                                "type",
-                                "file"
-                            ]
-                        },
-                        "minItems": 1
+                    "stakeholders[0][identification_type]": {
+                        "type": "string",
+                        "enum": [
+                            "BVN",
+                            "NIN"
+                        ]
+                    },
+                    "stakeholders[0][identification_number]": {
+                        "type": "string",
+                        "maxLength": 50
+                    },
+                    "stakeholders[0][identification_expires_at]": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "stakeholders[0][residential_address]": {
+                        "type": "string",
+                        "minLength": 10
+                    },
+                    "stakeholders[0][shareholding_percentage]": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                    },
+                    "stakeholders[0][role]": {
+                        "type": "string",
+                        "enum": [
+                            "director",
+                            "shareholder",
+                            "signatory",
+                            "beneficial_owner"
+                        ]
+                    },
+                    "stakeholders[0][is_pep]": {
+                        "type": "boolean"
+                    },
+                    "stakeholders[0][identity_document]": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "maxLength": 10240
+                    },
+                    "stakeholders[0][proof_of_address]": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "maxLength": 10240
+                    },
+                    "documents[0][type]": {
+                        "type": "string",
+                        "description": "Required document type: account_owner_identity_document.",
+                        "enum": [
+                            "account_owner_identity_document"
+                        ]
+                    },
+                    "documents[0][file]": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "maxLength": 10240
+                    },
+                    "documents[0][expires_at]": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "documents[1][type]": {
+                        "type": "string",
+                        "description": "Required document type: account_owner_address_proof.",
+                        "enum": [
+                            "account_owner_address_proof"
+                        ]
+                    },
+                    "documents[1][file]": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "maxLength": 10240
+                    },
+                    "documents[1][expires_at]": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "documents[2][type]": {
+                        "type": "string",
+                        "description": "Required document type: account_owner_passport_photograph.",
+                        "enum": [
+                            "account_owner_passport_photograph"
+                        ]
+                    },
+                    "documents[2][file]": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "maxLength": 10240
+                    },
+                    "documents[2][expires_at]": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "documents[3][type]": {
+                        "type": "string",
+                        "description": "Required document type: certificate_of_incorporation.",
+                        "enum": [
+                            "certificate_of_incorporation"
+                        ]
+                    },
+                    "documents[3][file]": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "maxLength": 10240
+                    },
+                    "documents[3][expires_at]": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "documents[4][type]": {
+                        "type": "string",
+                        "description": "Required document type: memorandum_and_articles.",
+                        "enum": [
+                            "memorandum_and_articles"
+                        ]
+                    },
+                    "documents[4][file]": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "maxLength": 10240
+                    },
+                    "documents[4][expires_at]": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "documents[5][type]": {
+                        "type": "string",
+                        "description": "Required document type: directors_status_report.",
+                        "enum": [
+                            "directors_status_report"
+                        ]
+                    },
+                    "documents[5][file]": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "maxLength": 10240
+                    },
+                    "documents[5][expires_at]": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "documents[6][type]": {
+                        "type": "string",
+                        "description": "Required document type: business_address_proof.",
+                        "enum": [
+                            "business_address_proof"
+                        ]
+                    },
+                    "documents[6][file]": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "maxLength": 10240
+                    },
+                    "documents[6][expires_at]": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "documents[7][type]": {
+                        "type": "string",
+                        "description": "Required document type: tin_certificate.",
+                        "enum": [
+                            "tin_certificate"
+                        ]
+                    },
+                    "documents[7][file]": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "maxLength": 10240
+                    },
+                    "documents[7][expires_at]": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "documents[8][type]": {
+                        "type": "string",
+                        "description": "Required document type: board_resolution.",
+                        "enum": [
+                            "board_resolution"
+                        ]
+                    },
+                    "documents[8][file]": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "maxLength": 10240
+                    },
+                    "documents[8][expires_at]": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "documents[9][type]": {
+                        "type": "string",
+                        "description": "Required document type: financial_statements.",
+                        "enum": [
+                            "financial_statements"
+                        ]
+                    },
+                    "documents[9][file]": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "maxLength": 10240
+                    },
+                    "documents[9][expires_at]": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "documents[10][type]": {
+                        "type": "string",
+                        "description": "Required document type: bank_statements.",
+                        "enum": [
+                            "bank_statements"
+                        ]
+                    },
+                    "documents[10][file]": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "maxLength": 10240
+                    },
+                    "documents[10][expires_at]": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
                     }
                 },
                 "required": [
@@ -9420,11 +9539,70 @@
                     "expected_monthly_transaction_volume",
                     "expected_monthly_transaction_value",
                     "source_of_funds",
-                    "business",
-                    "account_owner",
-                    "loan",
-                    "stakeholders",
-                    "documents"
+                    "business[registered_name]",
+                    "business[registration_number]",
+                    "business[type]",
+                    "business[industry]",
+                    "business[incorporation_date]",
+                    "business[registration_country]",
+                    "business[registration_state]",
+                    "business[registered_office_address]",
+                    "business[tin]",
+                    "business[email]",
+                    "business[phone]",
+                    "account_owner[first_name]",
+                    "account_owner[last_name]",
+                    "account_owner[date_of_birth]",
+                    "account_owner[gender]",
+                    "account_owner[nationality]",
+                    "account_owner[identification_type]",
+                    "account_owner[identification_number]",
+                    "account_owner[government_id_number]",
+                    "account_owner[government_id_expires_at]",
+                    "account_owner[phone]",
+                    "account_owner[email]",
+                    "account_owner[residential_address]",
+                    "account_owner[shareholding_percentage]",
+                    "account_owner[role]",
+                    "loan[amount_requested]",
+                    "loan[term_months]",
+                    "loan[purpose]",
+                    "loan[repayment_plan]",
+                    "stakeholders[0][full_name]",
+                    "stakeholders[0][date_of_birth]",
+                    "stakeholders[0][gender]",
+                    "stakeholders[0][nationality]",
+                    "stakeholders[0][identification_type]",
+                    "stakeholders[0][identification_number]",
+                    "stakeholders[0][residential_address]",
+                    "stakeholders[0][shareholding_percentage]",
+                    "stakeholders[0][role]",
+                    "stakeholders[0][is_pep]",
+                    "stakeholders[0][identity_document]",
+                    "stakeholders[0][proof_of_address]",
+                    "documents[0][type]",
+                    "documents[0][file]",
+                    "documents[1][type]",
+                    "documents[1][file]",
+                    "documents[2][type]",
+                    "documents[2][file]",
+                    "documents[3][type]",
+                    "documents[3][file]",
+                    "documents[4][type]",
+                    "documents[4][file]",
+                    "documents[5][type]",
+                    "documents[5][file]",
+                    "documents[6][type]",
+                    "documents[6][file]",
+                    "documents[7][type]",
+                    "documents[7][file]",
+                    "documents[8][type]",
+                    "documents[8][file]",
+                    "documents[9][type]",
+                    "documents[9][file]",
+                    "documents[10][type]",
+                    "documents[10][file]",
+                    "consent"
                 ],
                 "title": "StoreBusinessLoanApplicationRequest"
             },
