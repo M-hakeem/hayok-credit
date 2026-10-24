@@ -11,6 +11,7 @@ class BusinessLoanApplicationTest extends TestCase
 {
     public function test_partner_can_submit_a_business_loan_application_for_review(): void
     {
+        Storage::fake('local');
         Storage::fake('public');
         config(['services.partner.api_key' => 'partner-key']);
 
@@ -106,7 +107,8 @@ class BusinessLoanApplicationTest extends TestCase
         $application = BusinessLoanApplication::firstOrFail();
         $this->assertCount(13, $application->documents);
         $this->assertCount(1, $application->stakeholders);
-        Storage::disk('public')->assertExists($application->documents->first()->file_path);
+        Storage::disk('local')->assertExists($application->documents->first()->file_path);
+        Storage::disk('public')->assertMissing($application->documents->first()->file_path);
     }
 
     public function test_business_application_requires_partner_authentication(): void

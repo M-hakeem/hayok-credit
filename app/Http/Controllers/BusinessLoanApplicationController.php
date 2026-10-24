@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreBusinessLoanApplicationRequest;
 use App\Models\BusinessLoanApplication;
+use App\Models\BusinessLoanDocument;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -19,18 +21,30 @@ class BusinessLoanApplicationController extends Controller
         $request->validate([
             'status' => ['nullable', 'in:pending_review,approved,rejected,expired'],
             'per_page' => ['nullable', 'integer', 'between:1,100'],
+            'search' => ['nullable', 'string', 'max:100'],
         ]);
 
         $applications = BusinessLoanApplication::query()
             ->withCount(['documents', 'stakeholders'])
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->status))
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = '%'.trim((string) $request->input('search')).'%';
+                $query->where(function ($query) use ($search) {
+                    $query->where('reference', 'like', $search)
+                        ->orWhere('business_profile->registered_name', 'like', $search)
+                        ->orWhere('business_profile->registration_number', 'like', $search);
+                });
+            })
             ->latest()
             ->paginate($request->integer('per_page', 20));
 
         $applications->through(fn (BusinessLoanApplication $application) => [
+            'id' => $application->id,
             'reference' => $application->reference,
             'status' => $application->status,
             'risk_rating' => $application->risk_rating,
+            'review_notes' => $application->review_notes,
+            'reviewed_at' => $application->reviewed_at,
             'registered_business_name' => $application->business_profile['registered_name'] ?? null,
             'registration_number' => $application->business_profile['registration_number'] ?? null,
             'amount_requested' => $application->loan_details['amount_requested'] ?? null,
@@ -46,6 +60,26 @@ class BusinessLoanApplicationController extends Controller
         ]);
     }
 
+    public function approve(Request $request, BusinessLoanApplication $businessLoanApplication)
+    {
+        $data = $request->validate([
+            'review_notes' => ['nullable', 'string', 'max:2000'],
+            'risk_rating' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        return $this->review($businessLoanApplication, 'approved', $data);
+    }
+
+    public function reject(Request $request, BusinessLoanApplication $businessLoanApplication)
+    {
+        $data = $request->validate([
+            'review_notes' => ['required', 'string', 'max:2000'],
+            'risk_rating' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        return $this->review($businessLoanApplication, 'rejected', $data);
+    }
+
     public function show(BusinessLoanApplication $businessLoanApplication)
     {
         $businessLoanApplication->load([
@@ -56,6 +90,7 @@ class BusinessLoanApplicationController extends Controller
         return response()->json([
             'status' => 'success',
             'data' => [
+                'id' => $businessLoanApplication->id,
                 'reference' => $businessLoanApplication->reference,
                 'status' => $businessLoanApplication->status,
                 'risk_rating' => $businessLoanApplication->risk_rating,
@@ -68,6 +103,84 @@ class BusinessLoanApplicationController extends Controller
                 'loan' => $businessLoanApplication->loan_details,
                 'documents' => $businessLoanApplication->documents,
                 'stakeholders' => $businessLoanApplication->stakeholders,
+            ],
+        ]);
+    }
+
+    public function document(
+        BusinessLoanApplication $businessLoanApplication,
+        BusinessLoanDocument $document,
+    ) {
+        abort_unless(
+            $document->business_loan_application_id === $businessLoanApplication->id,
+            404,
+        );
+
+        $headers = [
+            'Content-Type' => $document->mime_type,
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ];
+
+        $privateDisk = Storage::disk('local');
+        if ($privateDisk->exists($document->file_path)) {
+            return $privateDisk->response(
+                $document->file_path,
+                $document->original_filename,
+                $headers,
+            );
+        }
+
+        $legacyPublicDisk = Storage::disk('public');
+        abort_unless($legacyPublicDisk->exists($document->file_path), 404);
+
+        return $legacyPublicDisk->response(
+            $document->file_path,
+            $document->original_filename,
+            $headers,
+        );
+    }
+
+    private function review(BusinessLoanApplication $businessLoanApplication, string $status, array $data)
+    {
+        $application = DB::transaction(function () use ($businessLoanApplication, $status, $data) {
+            $application = BusinessLoanApplication::query()
+                ->lockForUpdate()
+                ->findOrFail($businessLoanApplication->getKey());
+
+            if ($application->status !== 'pending_review') {
+                return null;
+            }
+
+            $application->update([
+                'status' => $status,
+                'risk_rating' => $data['risk_rating'] ?? null,
+                'review_notes' => $data['review_notes'] ?? null,
+                'reviewed_by' => auth()->id(),
+                'reviewed_at' => now(),
+            ]);
+
+            return $application->fresh();
+        });
+
+        if (! $application) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Only applications pending review can be approved or rejected.',
+            ], 422);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $status === 'approved'
+                ? 'Business loan application approved.'
+                : 'Business loan application rejected.',
+            'data' => [
+                'reference' => $application->reference,
+                'status' => $application->status,
+                'risk_rating' => $application->risk_rating,
+                'review_notes' => $application->review_notes,
+                'reviewed_at' => $application->reviewed_at,
             ],
         ]);
     }
@@ -144,7 +257,7 @@ class BusinessLoanApplicationController extends Controller
     {
         /** @var UploadedFile $file */
         $file = $request->file($inputKey);
-        $path = $file->store("business-kyb/{$application->reference}", 'public');
+        $path = $file->store("business-kyb/{$application->reference}", 'local');
 
         $application->documents()->create([
             'business_stakeholder_id' => $stakeholderId,

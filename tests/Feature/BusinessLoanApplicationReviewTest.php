@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\BusinessLoanApplication;
+use App\Models\BusinessLoanDocument;
+use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -54,6 +56,111 @@ class BusinessLoanApplicationReviewTest extends TestCase
             ->assertJsonCount(1, 'data.stakeholders');
     }
 
+    public function test_admin_can_download_an_application_document_from_private_storage(): void
+    {
+        $this->authenticateAdmin();
+        Storage::fake('local');
+        $application = $this->createBusinessApplication('BLA-DOC00000001');
+        $document = $application->documents()->create([
+            'document_type' => 'bank_statements',
+            'file_path' => 'business-kyb/BLA-DOC00000001/bank-statements.pdf',
+            'original_filename' => 'bank-statements.pdf',
+            'mime_type' => 'application/pdf',
+        ]);
+        Storage::disk('local')->put($document->file_path, 'private-document');
+
+        $this->get("/api/admin/business-loan-applications/{$application->id}/documents/{$document->id}")
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
+    }
+
+    public function test_admin_cannot_download_a_document_from_another_application(): void
+    {
+        $this->authenticateAdmin();
+        $application = $this->createBusinessApplication('BLA-DOC00000002');
+        $otherApplication = $this->createBusinessApplication('BLA-DOC00000003');
+        $document = $otherApplication->documents()->create([
+            'document_type' => 'bank_statements',
+            'file_path' => 'business-kyb/other/bank-statements.pdf',
+            'original_filename' => 'bank-statements.pdf',
+            'mime_type' => 'application/pdf',
+        ]);
+
+        $this->get("/api/admin/business-loan-applications/{$application->id}/documents/{$document->id}")
+            ->assertNotFound();
+    }
+
+    public function test_admin_can_search_business_loan_applications(): void
+    {
+        $this->authenticateAdmin();
+        $this->createBusinessApplication('BLA-SEARCH0001');
+
+        $this->getJson('/api/admin/business-loan-applications?search=Acme')
+            ->assertOk()
+            ->assertJsonPath('data.total', 1)
+            ->assertJsonPath('data.data.0.reference', 'BLA-SEARCH0001');
+    }
+
+    public function test_admin_can_approve_a_pending_business_loan_application(): void
+    {
+        $admin = $this->authenticateAdmin();
+        $application = $this->createBusinessApplication('BLA-APPROVE0001');
+
+        $this->postJson("/api/admin/business-loan-applications/{$application->id}/approve", [
+            'review_notes' => 'Documents reviewed.',
+            'risk_rating' => 'Low',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'approved')
+            ->assertJsonPath('data.review_notes', 'Documents reviewed.')
+            ->assertJsonPath('data.risk_rating', 'Low');
+
+        $this->assertDatabaseHas('business_loan_applications', [
+            'id' => $application->id,
+            'status' => 'approved',
+            'reviewed_by' => $admin->id,
+            'review_notes' => 'Documents reviewed.',
+            'risk_rating' => 'Low',
+        ]);
+    }
+
+    public function test_admin_can_reject_a_pending_business_loan_application_with_notes(): void
+    {
+        $this->authenticateAdmin();
+        $application = $this->createBusinessApplication('BLA-REJECT0001');
+
+        $this->postJson("/api/admin/business-loan-applications/{$application->id}/reject", [
+            'review_notes' => 'Required documents are incomplete.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'rejected');
+
+        $this->assertDatabaseHas('business_loan_applications', [
+            'id' => $application->id,
+            'status' => 'rejected',
+            'review_notes' => 'Required documents are incomplete.',
+        ]);
+    }
+
+    public function test_business_loan_application_review_requires_pending_status_and_rejection_notes(): void
+    {
+        $this->authenticateAdmin();
+        $application = $this->createBusinessApplication('BLA-REVIEW0001');
+
+        $this->postJson("/api/admin/business-loan-applications/{$application->id}/reject")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('review_notes');
+
+        $this->postJson("/api/admin/business-loan-applications/{$application->id}/approve")
+            ->assertOk();
+
+        $this->postJson("/api/admin/business-loan-applications/{$application->id}/reject", [
+            'review_notes' => 'Late review attempt.',
+        ])->assertUnprocessable();
+    }
+
     public function test_non_admin_cannot_view_business_loan_applications(): void
     {
         Sanctum::actingAs(User::create([
@@ -64,13 +171,16 @@ class BusinessLoanApplicationReviewTest extends TestCase
         $this->getJson('/api/admin/business-loan-applications')->assertForbidden();
     }
 
-    private function authenticateAdmin(): void
+    private function authenticateAdmin(): User
     {
-        Sanctum::actingAs(User::create([
+        $admin = User::create([
             'phone_number' => '+2348088888888',
             'password' => 'password',
             'role' => 'admin',
-        ]));
+        ]);
+        Sanctum::actingAs($admin);
+
+        return $admin;
     }
 
     private function createBusinessApplication(string $reference): BusinessLoanApplication
