@@ -113,4 +113,27 @@ class BusinessLoanApplicationTest extends TestCase
     {
         $this->post('/api/partner/business-loan-applications')->assertUnauthorized();
     }
+
+    public function test_swagger_documents_business_loan_multipart_fields_for_testing(): void
+    {
+        $openApi = $this->getJson('/docs/api.json')
+            ->assertOk()
+            ->json();
+        $schemaReference = $openApi['paths']['/partner/business-loan-applications']['post']['requestBody']['content']['multipart/form-data']['schema']['$ref'];
+        $schemaName = substr($schemaReference, strrpos($schemaReference, '/') + 1);
+        $schema = $openApi['components']['schemas'][$schemaName];
+
+        $this->assertArrayHasKey('nature_of_business', $schema['properties']);
+        $this->assertArrayHasKey('business[registered_name]', $schema['properties']);
+        $this->assertArrayHasKey('account_owner[first_name]', $schema['properties']);
+        $this->assertArrayHasKey('loan[amount_requested]', $schema['properties']);
+        $this->assertArrayHasKey('stakeholders[0][identity_document]', $schema['properties']);
+        $this->assertArrayHasKey('documents[10][file]', $schema['properties']);
+        $this->assertContains('consent', $schema['required']);
+        $this->assertContains('true', $schema['properties']['consent']['enum']);
+        $this->assertSame(
+            'binary',
+            $schema['properties']['documents[10][file]']['format'],
+        );
+    }
 }
