@@ -110,6 +110,18 @@ An administrator configures the maximum NGN amount a borrower with no previous l
 
 Both admin endpoints require an authenticated admin Sanctum token. The mobile app can read the authenticated user's entitlement with `GET /api/user/first-loan-limit`. Its `data` object includes `is_first_time_user`, `maximum_amount`, `configured`, and `currency`. `maximum_amount` is `null` for borrowers with prior loan history or when the limit has not been configured. The loan application endpoint also enforces the configured cap server-side; applications by first-time borrowers are blocked until an administrator sets it.
 
+## Business loan application review
+
+The partner endpoint `POST /api/partner/business-loan-applications` accepts business application submissions. Admins can review them using the authenticated admin endpoints:
+
+- `GET /api/admin/business-loan-applications` supports `status`, `search`, `page`, and `per_page` filters.
+- `GET /api/admin/business-loan-applications/{id}` returns the application details and attached business and stakeholder documents.
+- `GET /api/admin/business-loan-applications/{id}/documents/{documentId}` streams an attached document to an authenticated admin.
+- `POST /api/admin/business-loan-applications/{id}/approve` accepts optional `review_notes` and `risk_rating`.
+- `POST /api/admin/business-loan-applications/{id}/reject` requires `review_notes` and accepts optional `risk_rating`.
+
+Review actions apply only while an application is `pending_review`. New attachments are stored on the private local disk and served through the admin document endpoint. Approval records the reviewer and review metadata but does not create a borrower loan or disbursement; the application must first be linked to a borrower and a normal loan record.
+
 If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
 
 ## License

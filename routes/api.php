@@ -85,6 +85,9 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::get('users/{id}/wallet', [UserController::class, 'wallet']);
     Route::get('business-loan-applications', [BusinessLoanApplicationController::class, 'index']);
     Route::get('business-loan-applications/{businessLoanApplication}', [BusinessLoanApplicationController::class, 'show']);
+    Route::get('business-loan-applications/{businessLoanApplication}/documents/{document}', [BusinessLoanApplicationController::class, 'document']);
+    Route::post('business-loan-applications/{businessLoanApplication}/approve', [BusinessLoanApplicationController::class, 'approve']);
+    Route::post('business-loan-applications/{businessLoanApplication}/reject', [BusinessLoanApplicationController::class, 'reject']);
     Route::post('loan-interest', [LoanInterestSettingController::class, 'store']);
     Route::put('/loan-interest/{loanInterestSetting}', [LoanInterestSettingController::class, 'update']);
     Route::delete('/loan-interest/{loanInterestSetting}', [LoanInterestSettingController::class, 'destroy']);
