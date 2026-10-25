@@ -5,6 +5,7 @@ return [
     'public_key' => env('PAYSTACK_PUBLIC_KEY'),
     'base_url' => env('PAYSTACK_BASE_URL', 'https://api.paystack.co'),
     'webhook_secret' => env('PAYSTACK_WEBHOOK_SECRET'),
+    'wallet_deposit_callback_url' => env('PAYSTACK_WALLET_DEPOSIT_CALLBACK_URL'),
     'timeout' => (int) env('PAYSTACK_TIMEOUT', 20),
     'simulate_transfers' => env('PAYSTACK_SIMULATE_TRANSFERS', false),
     'authorization_amount_kobo' => (int) env('PAYSTACK_AUTHORIZATION_AMOUNT_KOBO', 10000),

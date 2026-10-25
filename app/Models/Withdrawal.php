@@ -20,11 +20,20 @@ class Withdrawal extends Model
         'bank_code',
         'status',
         'transaction_reference',
+        'paystack_reference',
+        'paystack_recipient_code',
+        'transfer_code',
+        'failure_reason',
+        'gateway_response',
         'processed_at',
     ];
 
+    protected $hidden = ['bank_account_number'];
+
     protected $casts = [
         'amount' => 'decimal:2',
+        'bank_account_number' => \App\Casts\Encrypted::class,
+        'gateway_response' => 'array',
         'processed_at' => 'datetime',
     ];
 

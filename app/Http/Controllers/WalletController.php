@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Withdrawal;
+use App\Services\Paystack\WalletDepositService;
+use App\Services\Paystack\WalletWithdrawalService;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Http\Request;
+use RuntimeException;
 
 class WalletController extends Controller
 {
@@ -68,105 +71,78 @@ class WalletController extends Controller
         ]);
     }
 
-    #[BodyParameter('amount', type: 'number', required: true, description: 'Amount to deposit (min 0.01)')]
-    #[BodyParameter('reference', type: 'string', required: false, description: 'Payment reference (max 255 chars)')]
+    #[BodyParameter('amount', type: 'number', required: true, description: 'Amount to deposit in NGN (min 0.01)')]
     #[BodyParameter('description', type: 'string', required: false, description: 'Deposit description (max 255 chars)')]
-    public function deposit(Request $request)
+    public function deposit(Request $request, WalletDepositService $service)
     {
-        $request->validate([
-            'amount' => 'required|numeric|min:0.01',
-            'reference' => 'nullable|string|max:255',
+        $data = $request->validate([
+            'amount' => 'required|numeric|decimal:0,2|min:0.01|max:9999999999.99',
             'description' => 'nullable|string|max:255',
         ]);
 
-        $user = auth()->user();
-        $wallet = $user->wallet;
-
-        if (! $wallet) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Wallet not found. Verify your NIN or BVN and create a wallet first.',
-            ], 404);
+        try {
+            $deposit = $service->initialize(auth()->user(), $data['amount'], $data['description'] ?? null);
+        } catch (RuntimeException $exception) {
+            return response()->json(['status' => 'error', 'message' => $exception->getMessage()], 422);
         }
 
-        $transaction = $wallet->credit(
-            (float) $request->amount,
-            $request->description ?? 'Wallet deposit',
-            $request->reference,
-        );
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Complete payment using the Paystack checkout link.',
+            'data' => $deposit,
+        ]);
+    }
+
+    public function verifyDeposit(WalletDepositService $service, string $reference)
+    {
+        try {
+            $deposit = $service->verifyAndCredit(auth()->user(), $reference);
+        } catch (RuntimeException $exception) {
+            return response()->json(['status' => 'error', 'message' => $exception->getMessage()], 422);
+        }
 
         return response()->json([
             'status' => 'success',
             'message' => 'Wallet funded successfully.',
-            'data' => [
-                'wallet' => $wallet->refresh(),
-                'transaction' => $transaction,
-            ],
+            'data' => $deposit,
         ]);
     }
 
-    #[BodyParameter('amount', type: 'number', required: true, description: 'Amount to withdraw (min 1)')]
-    #[BodyParameter('reference', type: 'string', required: false, description: 'Withdrawal reference (max 255 chars)')]
+    #[BodyParameter('amount', type: 'number', required: true, description: 'Amount to withdraw in NGN (min 1)')]
     #[BodyParameter('description', type: 'string', required: false, description: 'Withdrawal description (max 255 chars)')]
-    public function withdraw(Request $request)
+    public function withdraw(Request $request, WalletWithdrawalService $service)
     {
-        $request->validate([
-            'amount' => 'required|numeric|min:1',
-            'reference' => 'nullable|string|max:255',
+        $data = $request->validate([
+            'amount' => 'required|numeric|decimal:0,2|min:1|max:9999999999.99',
             'description' => 'nullable|string|max:255',
         ]);
 
-        $user = auth()->user();
-
-        if (! $user->bank_name || ! $user->bank_account_number || ! $user->bank_account_name) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Please connect your bank account before withdrawing funds.',
-            ], 422);
-        }
-
-        $wallet = $user->wallet;
-        if (! $wallet) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Wallet not found. Verify your NIN or BVN and create a wallet first.',
-            ], 404);
-        }
-
         try {
-            $transaction = $wallet->debit(
-                (float) $request->amount,
-                $request->description ?? 'Wallet withdrawal',
-                $request->reference,
-            );
+            $withdrawal = $service->requestWithdrawal(auth()->user(), $data['amount'], $data['description'] ?? null);
         } catch (\RuntimeException $exception) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $exception->getMessage(),
-            ], 422);
+            return response()->json(['status' => 'error', 'message' => $exception->getMessage()], 422);
         }
-
-        $withdrawal = Withdrawal::create([
-            'user_id' => $user->id,
-            'wallet_id' => $wallet->id,
-            'amount' => $request->amount,
-            'bank_name' => $user->bank_name,
-            'bank_account_number' => $user->bank_account_number,
-            'bank_account_name' => $user->bank_account_name,
-            'bank_code' => $user->bank_code,
-            'status' => 'pending',
-            'transaction_reference' => $request->reference,
-        ]);
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Withdrawal request created successfully. The amount has been reserved.',
-            'data' => [
-                'wallet' => $wallet,
-                'withdrawal' => $withdrawal,
-                'transaction' => $transaction,
-            ],
-        ]);
+            'message' => $withdrawal['message'],
+            'data' => $withdrawal['data'],
+        ], $withdrawal['http_status']);
+    }
+
+    public function verifyWithdrawal(WalletWithdrawalService $service, string $reference)
+    {
+        try {
+            $withdrawal = $service->verifyWithdrawal(auth()->user(), $reference);
+        } catch (RuntimeException $exception) {
+            return response()->json(['status' => 'error', 'message' => $exception->getMessage()], 422);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $withdrawal['message'],
+            'data' => $withdrawal['data'],
+        ], $withdrawal['http_status']);
     }
 
     public function transactions(Request $request)
