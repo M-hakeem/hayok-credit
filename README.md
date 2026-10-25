@@ -120,7 +120,9 @@ The partner endpoint `POST /api/partner/business-loan-applications` accepts busi
 - `POST /api/admin/business-loan-applications/{id}/approve` accepts optional `review_notes` and `risk_rating`.
 - `POST /api/admin/business-loan-applications/{id}/reject` requires `review_notes` and accepts optional `risk_rating`.
 
-Review actions apply only while an application is `pending_review`. New attachments are stored on the private local disk and served through the admin document endpoint. Approval records the reviewer and review metadata but does not create a borrower loan or disbursement; the application must first be linked to a borrower and a normal loan record.
+New partner submissions must include a payout account (`payout_account.bank_name`, `bank_code`, `bank_account_name`, and a 10-digit `bank_account_number`). These details are encrypted at rest. New attachments are stored on the private local disk and served through the admin document endpoint.
+
+Review actions apply only while an application is `pending_review`. The administrator can confirm or enter payout details while approving, including for older applications submitted before payout details were collected. Approval creates a dedicated business user with a wallet and a normal `pending` loan using the configured interest rate for the requested term. If the term has no active interest rate or the business contact email/phone already belongs to a user, approval is blocked and the application remains pending. Admins must separately approve the created loan in Loan Management; the normal Loan Disbursement flow then uses the business payout account. Approval does not disburse funds.
 
 If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
 
