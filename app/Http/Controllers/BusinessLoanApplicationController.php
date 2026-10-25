@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreBusinessLoanApplicationRequest;
 use App\Models\BusinessLoanApplication;
 use App\Models\BusinessLoanDocument;
+use App\Models\Loan;
+use App\Models\LoanInterestSetting;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -65,6 +68,11 @@ class BusinessLoanApplicationController extends Controller
         $data = $request->validate([
             'review_notes' => ['nullable', 'string', 'max:2000'],
             'risk_rating' => ['nullable', 'string', 'max:20'],
+            'payout_account' => ['sometimes', 'array'],
+            'payout_account.bank_name' => ['required_with:payout_account', 'string', 'max:255'],
+            'payout_account.bank_code' => ['required_with:payout_account', 'string', 'max:32'],
+            'payout_account.bank_account_name' => ['required_with:payout_account', 'string', 'max:255'],
+            'payout_account.bank_account_number' => ['required_with:payout_account', 'digits:10'],
         ]);
 
         return $this->review($businessLoanApplication, 'approved', $data);
@@ -96,9 +104,12 @@ class BusinessLoanApplicationController extends Controller
                 'risk_rating' => $businessLoanApplication->risk_rating,
                 'review_notes' => $businessLoanApplication->review_notes,
                 'reviewed_at' => $businessLoanApplication->reviewed_at,
+                'business_user_id' => $businessLoanApplication->business_user_id,
+                'loan_id' => $businessLoanApplication->loan_id,
                 'submitted_at' => $businessLoanApplication->created_at,
                 'consent_at' => $businessLoanApplication->consent_at,
                 'business' => $businessLoanApplication->business_profile,
+                'payout_account' => $businessLoanApplication->payout_account,
                 'account_owner' => $businessLoanApplication->account_owner,
                 'loan' => $businessLoanApplication->loan_details,
                 'documents' => $businessLoanApplication->documents,
@@ -143,13 +154,73 @@ class BusinessLoanApplicationController extends Controller
 
     private function review(BusinessLoanApplication $businessLoanApplication, string $status, array $data)
     {
-        $application = DB::transaction(function () use ($businessLoanApplication, $status, $data) {
+        $result = DB::transaction(function () use ($businessLoanApplication, $status, $data) {
             $application = BusinessLoanApplication::query()
                 ->lockForUpdate()
                 ->findOrFail($businessLoanApplication->getKey());
 
             if ($application->status !== 'pending_review') {
-                return null;
+                return ['error' => 'Only applications pending review can be approved or rejected.'];
+            }
+
+            if ($status === 'approved') {
+                $business = $application->business_profile;
+                $payoutAccount = $data['payout_account'] ?? $application->payout_account;
+                $loanDetails = $application->loan_details;
+
+                if (! $payoutAccount) {
+                    return ['error' => 'Business payout account details are missing. Update the application before approving it.'];
+                }
+
+                $interestRate = LoanInterestSetting::rateForTenure((int) $loanDetails['term_months']);
+                if ($interestRate <= 0) {
+                    return ['error' => 'No active loan interest rate is configured for this term.'];
+                }
+
+                if (User::withTrashed()->where('email', $business['email'])->exists()) {
+                    return ['error' => 'A user already exists with this business email. Resolve the duplicate before approving.'];
+                }
+
+                if (User::withTrashed()->where('phone_number', $business['phone'])->exists()) {
+                    return ['error' => 'A user already exists with this business phone number. Resolve the duplicate before approving.'];
+                }
+
+                $businessUser = User::create([
+                    'fullname' => $business['registered_name'],
+                    'email' => $business['email'],
+                    'phone_number' => $business['phone'],
+                    'password' => null,
+                    'role' => 'user',
+                    'bank_name' => $payoutAccount['bank_name'],
+                    'bank_account_number' => $payoutAccount['bank_account_number'],
+                    'bank_account_name' => $payoutAccount['bank_account_name'],
+                    'bank_code' => $payoutAccount['bank_code'],
+                    'bank_connected_at' => now(),
+                ]);
+
+                $businessUser->wallet()->create([
+                    'balance' => 0,
+                    'currency' => 'NGN',
+                ]);
+
+                $amount = (float) $loanDetails['amount_requested'];
+                $term = (int) $loanDetails['term_months'];
+                $totalInterest = round($amount * ($interestRate / 100), 2);
+                $loan = Loan::create([
+                    'user_id' => $businessUser->id,
+                    'amount_requested' => $amount,
+                    'interest_rate' => $interestRate,
+                    'total_interest' => $totalInterest,
+                    'total_repayable' => round($amount + $totalInterest, 2),
+                    'monthly_installment' => round(($amount + $totalInterest) / $term, 2),
+                    'term_months' => $term,
+                    'status' => 'pending',
+                    'application_reason' => $loanDetails['purpose'],
+                ]);
+
+                $application->business_user_id = $businessUser->id;
+                $application->loan_id = $loan->id;
+                $application->payout_account = $payoutAccount;
             }
 
             $application->update([
@@ -160,15 +231,17 @@ class BusinessLoanApplicationController extends Controller
                 'reviewed_at' => now(),
             ]);
 
-            return $application->fresh();
+            return ['application' => $application->fresh()];
         });
 
-        if (! $application) {
+        if (isset($result['error'])) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Only applications pending review can be approved or rejected.',
+                'message' => $result['error'],
             ], 422);
         }
+
+        $application = $result['application'];
 
         return response()->json([
             'status' => 'success',
@@ -181,6 +254,8 @@ class BusinessLoanApplicationController extends Controller
                 'risk_rating' => $application->risk_rating,
                 'review_notes' => $application->review_notes,
                 'reviewed_at' => $application->reviewed_at,
+                'business_user_id' => $application->business_user_id,
+                'loan_id' => $application->loan_id,
             ],
         ]);
     }
@@ -202,6 +277,7 @@ class BusinessLoanApplicationController extends Controller
                     'expected_monthly_transaction_value' => $data['expected_monthly_transaction_value'],
                     'source_of_funds' => $data['source_of_funds'],
                 ]),
+                'payout_account' => $data['payout_account'],
                 'account_owner' => $data['account_owner'],
                 'loan_details' => $data['loan'],
                 'status' => 'pending_review',

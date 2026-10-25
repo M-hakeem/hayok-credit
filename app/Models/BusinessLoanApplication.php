@@ -13,6 +13,7 @@ class BusinessLoanApplication extends Model
     protected $fillable = [
         'reference',
         'business_profile',
+        'payout_account',
         'account_owner',
         'loan_details',
         'status',
@@ -20,6 +21,8 @@ class BusinessLoanApplication extends Model
         'reviewed_by',
         'reviewed_at',
         'review_notes',
+        'business_user_id',
+        'loan_id',
         'consent_at',
     ];
 
@@ -27,6 +30,7 @@ class BusinessLoanApplication extends Model
     {
         return [
             'business_profile' => 'array',
+            'payout_account' => 'encrypted:array',
             'account_owner' => 'encrypted:array',
             'loan_details' => 'array',
             'reviewed_at' => 'datetime',
@@ -42,5 +46,15 @@ class BusinessLoanApplication extends Model
     public function documents()
     {
         return $this->hasMany(BusinessLoanDocument::class);
+    }
+
+    public function businessUser()
+    {
+        return $this->belongsTo(User::class, 'business_user_id');
+    }
+
+    public function loan()
+    {
+        return $this->belongsTo(Loan::class);
     }
 }

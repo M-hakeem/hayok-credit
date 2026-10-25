@@ -53,6 +53,12 @@ class BusinessLoanApplicationTest extends TestCase
                 'email' => 'business@example.test',
                 'phone' => '+2348012345678',
             ],
+            'payout_account' => [
+                'bank_name' => 'Test Bank',
+                'bank_code' => '001',
+                'bank_account_name' => 'Hayok Produce Limited',
+                'bank_account_number' => '0123456789',
+            ],
             'account_owner' => [
                 'first_name' => 'Ada',
                 'last_name' => 'Okafor',
@@ -107,6 +113,7 @@ class BusinessLoanApplicationTest extends TestCase
         $application = BusinessLoanApplication::firstOrFail();
         $this->assertCount(13, $application->documents);
         $this->assertCount(1, $application->stakeholders);
+        $this->assertSame('0123456789', $application->payout_account['bank_account_number']);
         Storage::disk('local')->assertExists($application->documents->first()->file_path);
         Storage::disk('public')->assertMissing($application->documents->first()->file_path);
     }
@@ -127,6 +134,8 @@ class BusinessLoanApplicationTest extends TestCase
 
         $this->assertArrayHasKey('nature_of_business', $schema['properties']);
         $this->assertArrayHasKey('business[registered_name]', $schema['properties']);
+        $this->assertArrayHasKey('payout_account[bank_account_number]', $schema['properties']);
+        $this->assertArrayHasKey('payout_account[bank_code]', $schema['properties']);
         $this->assertArrayHasKey('account_owner[first_name]', $schema['properties']);
         $this->assertArrayHasKey('loan[amount_requested]', $schema['properties']);
         $this->assertArrayHasKey('stakeholders[0][identity_document]', $schema['properties']);

@@ -37,6 +37,11 @@ class StoreBusinessLoanApplicationRequest extends FormRequest
             'business.email' => ['required', 'email', 'max:255'],
             'business.phone' => ['required', 'string', 'max:20'],
 
+            'payout_account.bank_name' => ['required', 'string', 'max:255'],
+            'payout_account.bank_code' => ['required', 'string', 'max:32'],
+            'payout_account.bank_account_name' => ['required', 'string', 'max:255'],
+            'payout_account.bank_account_number' => ['required', 'digits:10'],
+
             'account_owner.first_name' => ['required', 'string', 'max:100'],
             'account_owner.last_name' => ['required', 'string', 'max:100'],
             'account_owner.date_of_birth' => ['required', 'date', 'before:today'],
@@ -72,7 +77,7 @@ class StoreBusinessLoanApplicationRequest extends FormRequest
             'documents.*.file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
             'documents.*.expires_at' => ['nullable', 'date'],
 
-            'loan.amount_requested' => ['required', 'numeric', 'min:100'],
+            'loan.amount_requested' => ['required', 'numeric', 'min:100', 'max:9999999999.99'],
             'loan.term_months' => ['required', 'integer', 'between:1,60'],
             'loan.purpose' => ['required', 'string', 'max:1000'],
             'loan.existing_debt_obligations' => ['nullable', 'string', 'max:5000'],
