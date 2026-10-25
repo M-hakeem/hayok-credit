@@ -4,20 +4,20 @@ namespace App\Services\Paystack;
 
 use App\Models\LoanPayment;
 use App\Models\PaystackWebhookEvent;
-use App\Models\User;
 use App\Models\RepaymentSchedule;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use RuntimeException;
 
 class PaystackWebhookService
 {
     public function __construct(
         private readonly PaystackClient $client,
         private readonly PaymentAuthorizationService $authorizationService,
-    ) {
-    }
+        private readonly WalletDepositService $walletDepositService,
+        private readonly WalletWithdrawalService $walletWithdrawalService,
+    ) {}
 
     public function validSignature(string $payload, ?string $signature): bool
     {
@@ -84,6 +84,20 @@ class PaystackWebhookService
             if ($user) {
                 $this->authorizationService->verifyAndStore($user, $reference);
             }
+
+            return;
+        }
+
+        if (($metadata['purpose'] ?? null) === 'wallet_deposit') {
+            try {
+                $this->walletDepositService->creditVerifiedTransaction($verified);
+            } catch (RuntimeException $exception) {
+                Log::warning('Paystack wallet deposit webhook could not be settled', [
+                    'reference' => $reference,
+                    'reason' => $exception->getMessage(),
+                ]);
+            }
+
             return;
         }
 
@@ -129,6 +143,8 @@ class PaystackWebhookService
         if (! $reference) {
             return;
         }
+
+        $this->walletWithdrawalService->settleWebhook($data, $eventName);
 
         $disbursement = \App\Models\LoanDisbursement::where('provider_reference', $reference)->lockForUpdate()->first();
         if (! $disbursement) {

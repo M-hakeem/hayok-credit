@@ -52,7 +52,9 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('wallet/first-central/consumer-match', [FirstCentralController::class, 'consumerMatch'])->middleware('throttle:30,1');
     Route::post('wallet/bank', [WalletController::class, 'updateBankDetails']);
     Route::post('wallet/deposit', [WalletController::class, 'deposit']);
+    Route::get('wallet/deposit/verify/{reference}', [WalletController::class, 'verifyDeposit']);
     Route::post('wallet/withdraw', [WalletController::class, 'withdraw']);
+    Route::get('wallet/withdraw/verify/{reference}', [WalletController::class, 'verifyWithdrawal']);
     Route::get('bank-account', [PaystackBankController::class, 'show']);
     Route::post('bank-account', [PaystackBankController::class, 'store'])->middleware('throttle:10,1');
     Route::post('payments/paystack/initialize-card', [PaystackPaymentController::class, 'initializeCard'])->middleware('throttle:5,1');

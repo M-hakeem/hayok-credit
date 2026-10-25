@@ -124,7 +124,10 @@
                                                     "type": "integer"
                                                 },
                                                 "residential_address": {
-                                                    "type": "string"
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
                                                 },
                                                 "state": {
                                                     "type": [
@@ -1227,6 +1230,17 @@
                             "minimum": 1,
                             "maximum": 100
                         }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 100
+                        }
                     }
                 ],
                 "responses": {
@@ -1413,6 +1427,9 @@
                                         "data": {
                                             "type": "object",
                                             "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
                                                 "reference": {
                                                     "type": "string"
                                                 },
@@ -1438,6 +1455,18 @@
                                                     ],
                                                     "format": "date-time"
                                                 },
+                                                "business_user_id": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "loan_id": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ]
+                                                },
                                                 "submitted_at": {
                                                     "type": [
                                                         "string",
@@ -1452,6 +1481,12 @@
                                                 "business": {
                                                     "type": "array",
                                                     "items": {}
+                                                },
+                                                "payout_account": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
                                                 },
                                                 "account_owner": {
                                                     "type": "string"
@@ -1474,14 +1509,18 @@
                                                 }
                                             },
                                             "required": [
+                                                "id",
                                                 "reference",
                                                 "status",
                                                 "risk_rating",
                                                 "review_notes",
                                                 "reviewed_at",
+                                                "business_user_id",
+                                                "loan_id",
                                                 "submitted_at",
                                                 "consent_at",
                                                 "business",
+                                                "payout_account",
                                                 "account_owner",
                                                 "loan",
                                                 "documents",
@@ -1496,6 +1535,327 @@
                                 }
                             }
                         }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/business-loan-applications/{businessLoanApplication}/documents/{document}": {
+            "get": {
+                "operationId": "businessLoanApplication.document",
+                "tags": [
+                    "Business Loan Applications",
+                    "BusinessLoanApplication"
+                ],
+                "parameters": [
+                    {
+                        "name": "businessLoanApplication",
+                        "in": "path",
+                        "required": true,
+                        "description": "The business loan application ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "document",
+                        "in": "path",
+                        "required": true,
+                        "description": "The document ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/business-loan-applications/{businessLoanApplication}/approve": {
+            "post": {
+                "operationId": "businessLoanApplication.approve",
+                "tags": [
+                    "Business Loan Applications",
+                    "BusinessLoanApplication"
+                ],
+                "parameters": [
+                    {
+                        "name": "businessLoanApplication",
+                        "in": "path",
+                        "required": true,
+                        "description": "The business loan application ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "review_notes": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 2000
+                                    },
+                                    "risk_rating": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 20
+                                    },
+                                    "payout_account": {
+                                        "type": "object",
+                                        "properties": {
+                                            "bank_name": {
+                                                "type": "string",
+                                                "maxLength": 255
+                                            },
+                                            "bank_code": {
+                                                "type": "string",
+                                                "maxLength": 32
+                                            },
+                                            "bank_account_name": {
+                                                "type": "string",
+                                                "maxLength": 255
+                                            },
+                                            "bank_account_number": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Business loan application approved.",
+                                                "Business loan application rejected."
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "reference": {
+                                                    "type": "string"
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                },
+                                                "risk_rating": {
+                                                    "type": "string"
+                                                },
+                                                "review_notes": {
+                                                    "type": "string"
+                                                },
+                                                "reviewed_at": {
+                                                    "type": "string"
+                                                },
+                                                "business_user_id": {
+                                                    "type": "string"
+                                                },
+                                                "loan_id": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "reference",
+                                                "status",
+                                                "risk_rating",
+                                                "review_notes",
+                                                "reviewed_at",
+                                                "business_user_id",
+                                                "loan_id"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/business-loan-applications/{businessLoanApplication}/reject": {
+            "post": {
+                "operationId": "businessLoanApplication.reject",
+                "tags": [
+                    "Business Loan Applications",
+                    "BusinessLoanApplication"
+                ],
+                "parameters": [
+                    {
+                        "name": "businessLoanApplication",
+                        "in": "path",
+                        "required": true,
+                        "description": "The business loan application ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "review_notes": {
+                                        "type": "string",
+                                        "maxLength": 2000
+                                    },
+                                    "risk_rating": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 20
+                                    }
+                                },
+                                "required": [
+                                    "review_notes"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Business loan application approved.",
+                                                "Business loan application rejected."
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "reference": {
+                                                    "type": "string"
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                },
+                                                "risk_rating": {
+                                                    "type": "string"
+                                                },
+                                                "review_notes": {
+                                                    "type": "string"
+                                                },
+                                                "reviewed_at": {
+                                                    "type": "string"
+                                                },
+                                                "business_user_id": {
+                                                    "type": "string"
+                                                },
+                                                "loan_id": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "reference",
+                                                "status",
+                                                "risk_rating",
+                                                "review_notes",
+                                                "reviewed_at",
+                                                "business_user_id",
+                                                "loan_id"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     },
                     "404": {
                         "$ref": "#/components/responses/ModelNotFoundException"
@@ -2416,6 +2776,213 @@
                                                 "data"
                                             ]
                                         }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/user/first-loan-limit": {
+            "get": {
+                "operationId": "firstLoanLimit.eligibility",
+                "tags": [
+                    "FirstLoanLimit"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "is_first_time_user": {
+                                                    "type": "boolean"
+                                                },
+                                                "maximum_amount": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "configured": {
+                                                    "type": "boolean"
+                                                },
+                                                "currency": {
+                                                    "type": "string",
+                                                    "const": "NGN"
+                                                }
+                                            },
+                                            "required": [
+                                                "is_first_time_user",
+                                                "maximum_amount",
+                                                "configured",
+                                                "currency"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/first-loan-limit": {
+            "get": {
+                "operationId": "firstLoanLimit.show",
+                "tags": [
+                    "FirstLoanLimit"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "amount": {
+                                                    "type": "string"
+                                                },
+                                                "configured": {
+                                                    "type": "boolean"
+                                                },
+                                                "currency": {
+                                                    "type": "string",
+                                                    "const": "NGN"
+                                                }
+                                            },
+                                            "required": [
+                                                "amount",
+                                                "configured",
+                                                "currency"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "operationId": "firstLoanLimit.update",
+                "tags": [
+                    "FirstLoanLimit"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "amount": {
+                                        "type": "number",
+                                        "minimum": 100,
+                                        "maximum": 9999999.99
+                                    }
+                                },
+                                "required": [
+                                    "amount"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "First-loan request limit updated successfully."
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "amount": {
+                                                    "type": "string"
+                                                },
+                                                "configured": {
+                                                    "type": "boolean"
+                                                },
+                                                "currency": {
+                                                    "type": "string",
+                                                    "const": "NGN"
+                                                }
+                                            },
+                                            "required": [
+                                                "amount",
+                                                "configured",
+                                                "currency"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message",
+                                        "data"
                                     ]
                                 }
                             }
@@ -7335,11 +7902,7 @@
                                 "properties": {
                                     "amount": {
                                         "type": "object",
-                                        "description": "Amount to deposit (min 0.01)"
-                                    },
-                                    "reference": {
-                                        "type": "string",
-                                        "description": "Payment reference (max 255 chars)"
+                                        "description": "Amount to deposit in NGN (min 0.01)"
                                     },
                                     "description": {
                                         "type": "string",
@@ -7367,20 +7930,30 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "const": "Wallet funded successfully."
+                                            "const": "Complete payment using the Paystack checkout link."
                                         },
                                         "data": {
                                             "type": "object",
                                             "properties": {
-                                                "wallet": {
+                                                "reference": {
                                                     "type": "string"
                                                 },
-                                                "transaction": {
+                                                "amount": {
                                                     "type": "string"
+                                                },
+                                                "currency": {
+                                                    "type": "string",
+                                                    "const": "NGN"
+                                                },
+                                                "transaction": {
+                                                    "type": "array",
+                                                    "items": {}
                                                 }
                                             },
                                             "required": [
-                                                "wallet",
+                                                "reference",
+                                                "amount",
+                                                "currency",
                                                 "transaction"
                                             ]
                                         }
@@ -7394,7 +7967,86 @@
                             }
                         }
                     },
-                    "404": {
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/user/wallet/deposit/verify/{reference}": {
+            "get": {
+                "operationId": "wallet.verifyDeposit",
+                "tags": [
+                    "Wallet"
+                ],
+                "parameters": [
+                    {
+                        "name": "reference",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Wallet funded successfully."
+                                        },
+                                        "data": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "array",
+                                                    "items": {}
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "wallet": {
+                                                            "$ref": "#/components/schemas/Wallet"
+                                                        },
+                                                        "transaction": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "wallet",
+                                                        "transaction"
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
                         "description": "",
                         "content": {
                             "application/json": {
@@ -7406,8 +8058,7 @@
                                             "const": "error"
                                         },
                                         "message": {
-                                            "type": "string",
-                                            "const": "Wallet not found. Verify your NIN or BVN and create a wallet first."
+                                            "type": "string"
                                         }
                                     },
                                     "required": [
@@ -7417,9 +8068,6 @@
                                 }
                             }
                         }
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
@@ -7447,11 +8095,7 @@
                                 "properties": {
                                     "amount": {
                                         "type": "object",
-                                        "description": "Amount to withdraw (min 1)"
-                                    },
-                                    "reference": {
-                                        "type": "string",
-                                        "description": "Withdrawal reference (max 255 chars)"
+                                        "description": "Amount to withdraw in NGN (min 1)"
                                     },
                                     "description": {
                                         "type": "string",
@@ -7471,41 +8115,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "const": "success"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "const": "Withdrawal request created successfully. The amount has been reserved."
-                                        },
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "wallet": {
-                                                    "type": "string"
-                                                },
-                                                "withdrawal": {
-                                                    "$ref": "#/components/schemas/Withdrawal"
-                                                },
-                                                "transaction": {
-                                                    "type": "string"
-                                                }
-                                            },
-                                            "required": [
-                                                "wallet",
-                                                "withdrawal",
-                                                "transaction"
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "status",
-                                        "message",
-                                        "data"
-                                    ]
+                                    "type": "string"
                                 }
                             }
                         }
@@ -7513,7 +8123,45 @@
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
                     },
-                    "404": {
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/user/wallet/withdraw/verify/{reference}": {
+            "get": {
+                "operationId": "wallet.verifyWithdrawal",
+                "tags": [
+                    "Wallet"
+                ],
+                "parameters": [
+                    {
+                        "name": "reference",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
                         "description": "",
                         "content": {
                             "application/json": {
@@ -7525,8 +8173,7 @@
                                             "const": "error"
                                         },
                                         "message": {
-                                            "type": "string",
-                                            "const": "Wallet not found. Verify your NIN or BVN and create a wallet first."
+                                            "type": "string"
                                         }
                                     },
                                     "required": [
@@ -7575,7 +8222,10 @@
                         "type": "integer"
                     },
                     "residential_address": {
-                        "type": "string"
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     },
                     "state": {
                         "type": [
@@ -7654,6 +8304,12 @@
                         "type": "array",
                         "items": {}
                     },
+                    "payout_account": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
                     "account_owner": {
                         "type": "string"
                     },
@@ -7689,6 +8345,18 @@
                             "null"
                         ]
                     },
+                    "business_user_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "loan_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
                     "consent_at": {
                         "type": "string",
                         "format": "date-time"
@@ -7719,6 +8387,7 @@
                     "id",
                     "reference",
                     "business_profile",
+                    "payout_account",
                     "account_owner",
                     "loan_details",
                     "status",
@@ -7726,6 +8395,8 @@
                     "reviewed_by",
                     "reviewed_at",
                     "review_notes",
+                    "business_user_id",
+                    "loan_id",
                     "consent_at",
                     "created_at",
                     "updated_at",
@@ -9147,6 +9818,21 @@
                         "type": "string",
                         "maxLength": 20
                     },
+                    "payout_account[bank_name]": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "payout_account[bank_code]": {
+                        "type": "string",
+                        "maxLength": 32
+                    },
+                    "payout_account[bank_account_name]": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "payout_account[bank_account_number]": {
+                        "type": "string"
+                    },
                     "account_owner[first_name]": {
                         "type": "string",
                         "maxLength": 100
@@ -9213,7 +9899,8 @@
                     },
                     "loan[amount_requested]": {
                         "type": "number",
-                        "minimum": 100
+                        "minimum": 100,
+                        "maximum": 9999999999.99
                     },
                     "loan[term_months]": {
                         "type": "integer",
@@ -9550,6 +10237,10 @@
                     "business[tin]",
                     "business[email]",
                     "business[phone]",
+                    "payout_account[bank_name]",
+                    "payout_account[bank_code]",
+                    "payout_account[bank_account_name]",
+                    "payout_account[bank_account_number]",
                     "account_owner[first_name]",
                     "account_owner[last_name]",
                     "account_owner[date_of_birth]",
@@ -9968,6 +10659,58 @@
                 ],
                 "title": "User"
             },
+            "Wallet": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "balance": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "currency": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "id",
+                    "user_id",
+                    "balance",
+                    "status",
+                    "currency",
+                    "created_at",
+                    "updated_at",
+                    "deleted_at"
+                ],
+                "title": "Wallet"
+            },
             "Withdrawal": {
                 "type": "object",
                 "properties": {
@@ -9984,9 +10727,6 @@
                         "type": "string"
                     },
                     "bank_name": {
-                        "type": "string"
-                    },
-                    "bank_account_number": {
                         "type": "string"
                     },
                     "bank_account_name": {
@@ -10034,6 +10774,37 @@
                             "null"
                         ],
                         "format": "date-time"
+                    },
+                    "paystack_reference": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "paystack_recipient_code": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "transfer_code": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "failure_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "gateway_response": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
                     }
                 },
                 "required": [
@@ -10042,7 +10813,6 @@
                     "wallet_id",
                     "amount",
                     "bank_name",
-                    "bank_account_number",
                     "bank_account_name",
                     "bank_code",
                     "status",
@@ -10050,7 +10820,12 @@
                     "processed_at",
                     "created_at",
                     "updated_at",
-                    "deleted_at"
+                    "deleted_at",
+                    "paystack_reference",
+                    "paystack_recipient_code",
+                    "transfer_code",
+                    "failure_reason",
+                    "gateway_response"
                 ],
                 "title": "Withdrawal"
             }

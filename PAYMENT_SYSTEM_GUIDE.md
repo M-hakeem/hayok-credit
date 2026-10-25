@@ -158,66 +158,81 @@ Response:
 #### Deposit to Wallet
 ```
 POST /api/user/wallet/deposit
+Authorization: Bearer <user-token>
 
 Request Body:
 {
   "amount": 50000.00,
-  "reference": "ref-deposit-123",
   "description": "Monthly top-up"
 }
 
 Response:
 {
   "status": "success",
-  "message": "Wallet funded successfully.",
+  "message": "Complete payment using the Paystack checkout link.",
   "data": {
-    "wallet": {
-      "balance": "100000.00",
-      ...
-    },
+    "reference": "wallet-deposit-1-generated-uuid",
+    "amount": "50000.00",
+    "currency": "NGN",
     "transaction": {
-      "id": 2,
-      "type": "credit",
-      "amount": "50000.00",
-      ...
+      "authorization_url": "https://checkout.paystack.com/...",
+      "access_code": "...",
+      "reference": "wallet-deposit-1-generated-uuid"
     }
   }
 }
 ```
 
+Redirect the user to `data.transaction.authorization_url` to complete payment. After Paystack returns the user to the app, verify the returned reference:
+```
+GET /api/user/wallet/deposit/verify/{reference}
+Authorization: Bearer <user-token>
+```
+
+The wallet is credited only after the backend verifies a successful Paystack transaction with the expected amount, currency, and account. Paystack's signed `charge.success` webhook also settles deposits, so a user returning to the app is not required for the credit to complete. Verification is idempotent; repeating it will not credit the same deposit twice. Do not call this endpoint with a client-generated payment reference.
+
+Set `PAYSTACK_WALLET_DEPOSIT_CALLBACK_URL` to the app's return URL if the user should be redirected back to the app after Paystack checkout. The client must then call the authenticated verification endpoint using the returned Paystack reference.
+
 #### Withdraw from Wallet
 ```
 POST /api/user/wallet/withdraw
+Authorization: Bearer <user-token>
 
 Requirements:
-- Bank account must be connected first (POST /api/user/wallet/bank)
+- The user must have a wallet with sufficient NGN balance.
+- A Nigerian bank account must be connected and validated first (POST /api/user/bank-account).
 
 Request Body:
 {
   "amount": 10000.00,
-  "reference": "ref-withdraw-123",
   "description": "Withdrawal to bank"
 }
 
 Response:
 {
   "status": "success",
-  "message": "Withdrawal request created successfully.",
+  "message": "Withdrawal submitted; transfer status is being confirmed.",
   "data": {
-    "wallet": {...},
     "withdrawal": {
       "id": 1,
       "amount": "10000.00",
-      "status": "pending"
+      "status": "processing",
+      "paystack_reference": "wallet-withdrawal-1-generated-uuid"
     },
-    "transaction": {
-      "id": 3,
-      "type": "debit",
-      ...
+    "wallet": {
+      "balance": "40000.00"
     }
   }
 }
 ```
+
+The backend verifies the saved account with Paystack, creates a transfer recipient, reserves the requested amount in the wallet, then initiates a Paystack transfer to that bank. A `202` response means Paystack is still processing or confirming the transfer; poll the authenticated endpoint below or wait for the Paystack webhook:
+```
+GET /api/user/wallet/withdraw/verify/{reference}
+Authorization: Bearer <user-token>
+```
+
+On transfer success, the withdrawal becomes `completed`. If Paystack reports a failure or reversal, the withdrawal becomes `failed` and the reserved amount is refunded to the wallet once. The user-provided request must not include a transfer reference. Paystack transfers require adequate funds in the platform's Paystack balance.
 
 #### Update Bank Details
 ```
