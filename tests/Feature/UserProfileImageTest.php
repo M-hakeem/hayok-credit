@@ -41,6 +41,7 @@ class UserProfileImageTest extends TestCase
 
         $response = $this->post('/api/user/update-profile', [
             'fullname' => 'Jane Smith',
+            'email' => 'jane@example.com',
             'profile_image' => UploadedFile::fake()->image('avatar.jpg', 200, 200),
         ]);
 

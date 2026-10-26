@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class UpdateProfileRequest extends FormRequest
@@ -18,7 +19,12 @@ class UpdateProfileRequest extends FormRequest
             'fullname'      => 'sometimes|string|max:255',
             'dob'           => 'sometimes|date',
             'gender'        => 'sometimes|string|in:male,female,other',
-            'email'         => 'sometimes|email|max:255|unique:users,email,' . auth()->id(),
+            'email'         => [
+                'sometimes',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($this->user()),
+            ],
             'profile_image' => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:2048',
         ];
     }
