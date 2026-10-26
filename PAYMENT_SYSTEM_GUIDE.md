@@ -23,6 +23,12 @@ Check Wallet Balance
         └─ If no saved card → Error (suggest wallet top-up or card authorization)
 ```
 
+## Loan Disbursement
+
+Loan applications submitted through the partner loan or business-loan endpoints are paid to the bank account supplied with that application. Partner applications must include the bank name, bank code, account name, and account number. The payout account is saved with the loan so later changes to the user's profile do not redirect the transfer. These transfers are initiated through Paystack and remain processing until Paystack confirms success; the loan becomes active after confirmation.
+
+Loans submitted independently are credited to the user's wallet when disbursed.
+
 ## API Endpoints
 
 ### Wallet Management

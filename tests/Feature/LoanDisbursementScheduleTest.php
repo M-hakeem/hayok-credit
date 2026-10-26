@@ -6,6 +6,7 @@ use App\Models\Loan;
 use App\Models\LoanDisbursement;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class LoanDisbursementScheduleTest extends TestCase
@@ -57,6 +58,10 @@ class LoanDisbursementScheduleTest extends TestCase
             'id' => $disbursement->id,
             'status' => 'disbursed',
         ]);
+        $this->assertDatabaseHas('wallets', [
+            'user_id' => $user->id,
+            'balance' => 30000,
+        ]);
 
         $loan->refresh();
 
@@ -65,6 +70,100 @@ class LoanDisbursementScheduleTest extends TestCase
 
         $expectedDueDate = Carbon::parse($loan->disbursement->disbursed_at)->addMonths(1)->toDateString();
         $this->assertSame($expectedDueDate, $loan->repaymentSchedules()->orderBy('due_date')->first()->due_date->toDateString());
+    }
+
+    public function test_partner_loan_is_disbursed_to_its_bank_account(): void
+    {
+        $user = User::create([
+            'fullname' => 'Partner User',
+            'email' => 'partner@example.com',
+            'phone_number' => '08012345679',
+            'bank_name' => 'Partner Bank',
+            'bank_account_number' => '1111111111',
+            'bank_account_name' => 'Partner User',
+            'bank_code' => '001',
+            'password' => 'secret1234',
+            'role' => 'admin',
+        ]);
+
+        $loan = Loan::create([
+            'user_id' => $user->id,
+            'amount_requested' => 30000,
+            'interest_rate' => 10,
+            'total_interest' => 3000,
+            'total_repayable' => 33000,
+            'monthly_installment' => 11000,
+            'term_months' => 3,
+            'status' => 'approved',
+            'disbursement_method' => 'bank',
+        ]);
+
+        $disbursement = LoanDisbursement::create([
+            'loan_id' => $loan->id,
+            'user_id' => $user->id,
+            'amount' => 30000,
+            'bank_name' => 'Partner Bank',
+            'bank_account_number' => '9876543210',
+            'bank_account_name' => 'Partner User',
+            'bank_code' => '001',
+            'status' => 'pending',
+        ]);
+
+        Http::fake([
+            'api.paystack.co/transferrecipient' => Http::response([
+                'status' => true,
+                'data' => ['recipient_code' => 'RCP_partner'],
+            ]),
+            'api.paystack.co/transfer' => Http::response([
+                'status' => true,
+                'data' => ['transfer_code' => 'TRF_partner', 'status' => 'pending'],
+            ]),
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/admin/loans/{$loan->id}/disburse")
+            ->assertStatus(202)
+            ->assertJsonPath('data.disbursement.status', 'processing')
+            ->assertJsonPath('data.transfer.transfer_code', 'TRF_partner');
+
+        $this->assertDatabaseHas('loan_disbursements', [
+            'id' => $disbursement->id,
+            'status' => 'processing',
+            'provider' => 'paystack',
+        ]);
+        $this->assertDatabaseHas('loans', [
+            'id' => $loan->id,
+            'status' => 'approved',
+        ]);
+        $this->assertDatabaseMissing('wallets', ['user_id' => $user->id]);
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'transferrecipient')
+            && $request['account_number'] === '9876543210'
+            && $request['bank_code'] === '001');
+
+        config(['paystack.secret_key' => 'test-secret']);
+        $payload = [
+            'event' => 'transfer.success',
+            'data' => [
+                'reference' => $disbursement->fresh()->provider_reference,
+                'transfer_code' => 'TRF_partner',
+            ],
+        ];
+        $signature = hash_hmac('sha512', json_encode($payload), 'test-secret');
+
+        $this->withHeaders(['x-paystack-signature' => $signature])
+            ->postJson('/api/paystack/webhook', $payload)
+            ->assertOk();
+
+        $this->assertDatabaseHas('loan_disbursements', [
+            'id' => $disbursement->id,
+            'status' => 'disbursed',
+        ]);
+        $this->assertDatabaseHas('loans', [
+            'id' => $loan->id,
+            'status' => 'active',
+        ]);
+        $this->assertCount(3, $loan->fresh()->repaymentSchedules);
+        $this->assertDatabaseMissing('wallets', ['user_id' => $user->id]);
     }
 
     public function test_configured_term_rate_is_split_evenly_across_installments(): void

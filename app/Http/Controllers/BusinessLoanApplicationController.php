@@ -215,6 +215,8 @@ class BusinessLoanApplicationController extends Controller
                     'monthly_installment' => round(($amount + $totalInterest) / $term, 2),
                     'term_months' => $term,
                     'status' => 'pending',
+                    'disbursement_method' => 'bank',
+                    'payout_account' => $payoutAccount,
                     'application_reason' => $loanDetails['purpose'],
                 ]);
 

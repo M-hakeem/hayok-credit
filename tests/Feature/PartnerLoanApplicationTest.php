@@ -41,6 +41,7 @@ class PartnerLoanApplicationTest extends TestCase
                 'bank_name' => 'Test Bank',
                 'bank_account_number' => '0123456789',
                 'bank_account_name' => 'Test Applicant',
+                'bank_code' => '001',
                 'amount_requested' => 100000,
                 'term_months' => 12,
                 'guarantors' => [[
@@ -61,14 +62,19 @@ class PartnerLoanApplicationTest extends TestCase
             ->assertJsonPath('status', 'success')
             ->assertJsonPath('data.address.residential_address', '12 Example Street, Lagos')
             ->assertJsonPath('data.address.state', 'Lagos')
-            ->assertJsonPath('data.address.lga', 'Ikeja');
+            ->assertJsonPath('data.address.lga', 'Ikeja')
+            ->assertJsonPath('data.loan.disbursement_method', 'bank')
+            ->assertJsonMissingPath('data.loan.payout_account');
 
         $address = Address::query()->firstOrFail();
         $guarantor = Guarantor::query()->firstOrFail();
+        $loan = \App\Models\Loan::query()->firstOrFail();
 
         $this->assertSame('12 Example Street, Lagos', $address->residential_address);
         $this->assertSame('Lagos', $address->state);
         $this->assertSame('Ikeja', $address->lga);
+        $this->assertSame('bank', $loan->disbursement_method);
+        $this->assertSame('0123456789', $loan->payout_account['bank_account_number']);
         $this->assertNotNull($guarantor->id_file_path);
         Storage::disk('public')->assertExists($guarantor->id_file_path);
 
@@ -77,6 +83,10 @@ class PartnerLoanApplicationTest extends TestCase
             ->post('/api/partner/loan-application', [
                 'organisation_name' => 'Test Organisation',
                 'phone_number' => '08012345670',
+                'bank_name' => 'Test Bank',
+                'bank_account_number' => '0123456789',
+                'bank_account_name' => 'Test Applicant',
+                'bank_code' => '001',
                 'amount_requested' => 100000,
                 'term_months' => 12,
                 'guarantors' => [[
@@ -95,6 +105,10 @@ class PartnerLoanApplicationTest extends TestCase
             ->postJson('/api/partner/loan-application', [
                 'organisation_name' => 'Test Organisation',
                 'phone_number' => '08012345670',
+                'bank_name' => 'Test Bank',
+                'bank_account_number' => '0123456789',
+                'bank_account_name' => 'Test Applicant',
+                'bank_code' => '001',
                 'residential_address' => '34 Legacy Address Road, Lagos',
                 'state' => 'Ogun',
                 'lga' => 'Abeokuta South',

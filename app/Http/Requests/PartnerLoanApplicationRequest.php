@@ -52,10 +52,10 @@ class PartnerLoanApplicationRequest extends FormRequest
             'address.lga'                 => 'nullable|string|max:100',
 
             // Bank
-            'bank_name'           => 'nullable|string|max:255',
-            'bank_account_number' => 'nullable|string|max:64',
-            'bank_account_name'   => 'nullable|string|max:255',
-            'bank_code'           => 'nullable|string|max:32',
+            'bank_name'           => 'required|string|max:255',
+            'bank_account_number' => 'required|string|max:64',
+            'bank_account_name'   => 'required|string|max:255',
+            'bank_code'           => 'required|string|max:32',
 
             // Loan
             'amount_requested'   => 'required|numeric|min:100|max:9999999.99',
@@ -92,7 +92,6 @@ class PartnerLoanApplicationRequest extends FormRequest
                 $required = [
                     'fullname', 'dob', 'gender', 'nin', 'bvn',
                     'address.residential_address',
-                    'bank_name', 'bank_account_number', 'bank_account_name',
                 ];
                 foreach ($required as $field) {
                     if (!$this->filled($field)) {

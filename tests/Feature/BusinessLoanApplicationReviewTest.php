@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\BusinessLoanApplication;
 use App\Models\BusinessLoanDocument;
+use App\Models\Loan;
 use App\Models\LoanDisbursement;
 use App\Models\LoanInterestSetting;
 use Illuminate\Support\Facades\Storage;
@@ -135,9 +136,11 @@ class BusinessLoanApplicationReviewTest extends TestCase
             'risk_rating' => 'Low',
         ]);
         $businessUser = User::findOrFail($businessUserId);
+        $loan = Loan::findOrFail($loanId);
         $this->assertSame('Acme Limited', $businessUser->fullname);
         $this->assertSame('business@example.test', $businessUser->email);
         $this->assertSame('0123456789', $businessUser->bank_account_number);
+        $this->assertSame('0123456789', $loan->payout_account['bank_account_number']);
         $this->assertNotNull($businessUser->wallet);
         $this->assertDatabaseHas('loans', [
             'id' => $loanId,
@@ -145,6 +148,7 @@ class BusinessLoanApplicationReviewTest extends TestCase
             'amount_requested' => 1000000,
             'interest_rate' => 5,
             'status' => 'pending',
+            'disbursement_method' => 'bank',
             'application_reason' => 'Purchase equipment.',
         ]);
         $this->assertDatabaseMissing('loan_disbursements', ['loan_id' => $loanId]);
