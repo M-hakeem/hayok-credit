@@ -83,7 +83,9 @@ class LoanDisbursementController extends Controller
                     'bank_name'           => $payoutAccount['bank_name'] ?? $loan->user->bank_name ?? '',
                     'bank_account_number' => $payoutAccount['bank_account_number'] ?? $loan->user->bank_account_number ?? '',
                     'bank_account_name'   => $payoutAccount['bank_account_name'] ?? $loan->user->bank_account_name ?? '',
-                    'bank_code'           => $payoutAccount['bank_code'] ?? $loan->user->bank_code,
+                    'bank_code'           => array_key_exists('bank_code', $payoutAccount)
+                        ? $payoutAccount['bank_code']
+                        : $loan->user->bank_code,
                     'status'              => 'pending',
                 ]
             );

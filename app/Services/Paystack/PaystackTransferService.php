@@ -18,6 +18,21 @@ class PaystackTransferService
             throw new RuntimeException('This disbursement has already been processed or is in progress.');
         }
 
+        if (! $disbursement->bank_code) {
+            $bankName = mb_strtolower(trim((string) $disbursement->bank_name));
+            $bank = collect($this->client->listBanks())->first(
+                fn (array $bank) => mb_strtolower(trim((string) ($bank['name'] ?? ''))) === $bankName
+            );
+            $bankCode = $bank['code'] ?? null;
+
+            if (! $bankCode) {
+                throw new RuntimeException('Could not find a Paystack bank code for the supplied bank name.');
+            }
+
+            $disbursement->update(['bank_code' => (string) $bankCode]);
+            $disbursement->refresh();
+        }
+
         if (! $disbursement->bank_code || ! $disbursement->bank_account_number || ! $disbursement->bank_account_name) {
             throw new RuntimeException('A validated Nigerian bank account is required for disbursement.');
         }

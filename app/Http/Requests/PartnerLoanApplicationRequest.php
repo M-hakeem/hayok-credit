@@ -55,7 +55,7 @@ class PartnerLoanApplicationRequest extends FormRequest
             'bank_name'           => 'required|string|max:255',
             'bank_account_number' => 'required|string|max:64',
             'bank_account_name'   => 'required|string|max:255',
-            'bank_code'           => 'required|string|max:32',
+            'bank_code'           => 'nullable|string|max:32',
 
             // Loan
             'amount_requested'   => 'required|numeric|min:100|max:9999999.99',
