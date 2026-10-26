@@ -16,10 +16,10 @@ class UpdateProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'fullname'      => 'sometimes|string|max:255',
-            'dob'           => 'sometimes|date',
-            'gender'        => 'sometimes|string|in:male,female,other',
-            'email'         => [
+            'fullname' => 'sometimes|string|max:255',
+            'dob' => 'sometimes|date',
+            'gender' => 'sometimes|string|in:male,female,other',
+            'email' => [
                 'sometimes',
                 'email',
                 'max:255',

@@ -40,7 +40,6 @@ class UserProfileImageTest extends TestCase
         Sanctum::actingAs($user, ['*']);
 
         $response = $this->post('/api/user/update-profile', [
-            'fullname' => 'Jane Smith',
             'email' => 'jane@example.com',
             'profile_image' => UploadedFile::fake()->image('avatar.jpg', 200, 200),
         ]);
@@ -48,7 +47,7 @@ class UserProfileImageTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonPath('status', 'success')
-            ->assertJsonPath('user.fullname', 'Jane Smith')
+            ->assertJsonPath('user.fullname', 'Jane Doe')
             ->assertJsonPath('user.profile_image', fn ($value) => ! empty($value))
             ->assertJsonPath('user.profile_image_url', fn ($value) => str_starts_with($value, 'http'));
 
@@ -68,5 +67,19 @@ class UserProfileImageTest extends TestCase
         $response
             ->assertUnprocessable()
             ->assertJsonValidationErrors('profile');
+    }
+
+    public function test_profile_update_rejects_an_email_already_used_by_another_user(): void
+    {
+        $user = User::factory()->create();
+        $anotherUser = User::factory()->create();
+
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/user/update-profile', [
+            'email' => $anotherUser->email,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('email');
     }
 }
