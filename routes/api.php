@@ -98,7 +98,6 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::post('loans/{id}/approve', [LoanController::class, 'approve']);
     Route::post('loans/{id}/reject', [LoanController::class, 'reject']);
     Route::post('loans/{id}/disburse', [LoanDisbursementController::class, 'disburse']);
-    Route::post('loans/{id}/disburse/confirm-otp', [LoanDisbursementController::class, 'confirmOtp']);
     Route::get('loan-disbursements', [LoanDisbursementController::class, 'index']);
     Route::get('loan-disbursements/history', [LoanDisbursementController::class, 'disbursedLoanHistory']);
     Route::get('loan-payments', [LoanPaymentController::class, 'adminIndex']);
