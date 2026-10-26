@@ -198,15 +198,16 @@ class LoanController extends Controller
                 'risk_grade'   => $request->risk_grade,
             ]);
 
+            $payoutAccount = $loan->payout_account ?? [];
             LoanDisbursement::firstOrCreate(
                 ['loan_id' => $loan->id],
                 [
                     'user_id'             => $loan->user_id,
                     'amount'              => $loan->amount_requested,
-                    'bank_name'           => $loan->user->bank_name,
-                    'bank_account_number' => $loan->user->bank_account_number,
-                    'bank_account_name'   => $loan->user->bank_account_name,
-                    'bank_code'           => $loan->user->bank_code,
+                    'bank_name'           => $payoutAccount['bank_name'] ?? $loan->user->bank_name,
+                    'bank_account_number' => $payoutAccount['bank_account_number'] ?? $loan->user->bank_account_number,
+                    'bank_account_name'   => $payoutAccount['bank_account_name'] ?? $loan->user->bank_account_name,
+                    'bank_code'           => $payoutAccount['bank_code'] ?? $loan->user->bank_code,
                     'status'              => 'pending',
                 ]
             );

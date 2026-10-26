@@ -6,6 +6,7 @@ use App\Models\Loan;
 use App\Models\LoanDisbursement;
 use App\Models\RepaymentSchedule;
 use App\Services\Paystack\PaystackClient;
+use App\Services\Paystack\PaystackTransferService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -57,7 +58,7 @@ class LoanDisbursementController extends Controller
         ]);
     }
 
-    public function disburse(Request $request, $id)
+    public function disburse(Request $request, $id, PaystackTransferService $transferService)
     {
         $disbursement = LoanDisbursement::with('loan.user.organisation')
             ->where('loan_id', $id)
@@ -73,15 +74,16 @@ class LoanDisbursementController extends Controller
                 ], 404);
             }
 
+            $payoutAccount = $loan->payout_account ?? [];
             $disbursement = \App\Models\LoanDisbursement::firstOrCreate(
                 ['loan_id' => $loan->id],
                 [
                     'user_id'             => $loan->user_id,
                     'amount'              => $loan->amount_requested,
-                    'bank_name'           => $loan->user->bank_name ?? '',
-                    'bank_account_number' => $loan->user->bank_account_number ?? '',
-                    'bank_account_name'   => $loan->user->bank_account_name ?? '',
-                    'bank_code'           => $loan->user->bank_code,
+                    'bank_name'           => $payoutAccount['bank_name'] ?? $loan->user->bank_name ?? '',
+                    'bank_account_number' => $payoutAccount['bank_account_number'] ?? $loan->user->bank_account_number ?? '',
+                    'bank_account_name'   => $payoutAccount['bank_account_name'] ?? $loan->user->bank_account_name ?? '',
+                    'bank_code'           => $payoutAccount['bank_code'] ?? $loan->user->bank_code,
                     'status'              => 'pending',
                 ]
             );
@@ -103,6 +105,26 @@ class LoanDisbursementController extends Controller
                 'status' => 'error',
                 'message' => 'Loan must be approved before it can be disbursed.',
             ], 422);
+        }
+
+        if ($loan->disbursement_method === 'bank') {
+            try {
+                $transfer = $transferService->disburse($disbursement);
+            } catch (\RuntimeException $exception) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $exception->getMessage(),
+                ], 422);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Bank transfer initiated. Awaiting Paystack confirmation.',
+                'data' => [
+                    'disbursement' => $disbursement->fresh(),
+                    'transfer' => $transfer,
+                ],
+            ], 202);
         }
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($disbursement, $loan) {

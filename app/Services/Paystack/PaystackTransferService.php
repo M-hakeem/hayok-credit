@@ -18,25 +18,8 @@ class PaystackTransferService
             throw new RuntimeException('This disbursement has already been processed or is in progress.');
         }
 
-        $user = $disbursement->user;
-        if (! $user || ! $user->bank_code || ! $user->bank_account_number || ! $user->bank_account_name) {
+        if (! $disbursement->bank_code || ! $disbursement->bank_account_number || ! $disbursement->bank_account_name) {
             throw new RuntimeException('A validated Nigerian bank account is required for disbursement.');
-        }
-
-        // Approval may have happened before the borrower connected a bank account.
-        // Refresh the pending disbursement snapshot from the validated user profile.
-        if (
-            $disbursement->bank_code !== $user->bank_code
-            || $disbursement->bank_account_number !== $user->bank_account_number
-            || $disbursement->bank_account_name !== $user->bank_account_name
-        ) {
-            $disbursement->update([
-                'bank_name' => $user->bank_name ?: 'Bank '.$user->bank_code,
-                'bank_code' => $user->bank_code,
-                'bank_account_number' => $user->bank_account_number,
-                'bank_account_name' => $user->bank_account_name,
-            ]);
-            $disbursement->refresh();
         }
 
         $recipientCode = $disbursement->paystack_recipient_code;

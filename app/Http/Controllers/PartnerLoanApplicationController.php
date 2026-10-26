@@ -175,6 +175,13 @@ class PartnerLoanApplicationController extends Controller
                     'monthly_installment' => $monthlyInstallment,
                     'term_months'         => $termMonths,
                     'status'              => 'pending',
+                    'disbursement_method' => 'bank',
+                    'payout_account'     => [
+                        'bank_name' => $request->bank_name,
+                        'bank_account_number' => $request->bank_account_number,
+                        'bank_account_name' => $request->bank_account_name,
+                        'bank_code' => $request->bank_code,
+                    ],
                     'application_reason'  => $request->application_reason,
                 ]);
 

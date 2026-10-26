@@ -19,6 +19,8 @@ class Loan extends Model
         'monthly_installment',
         'term_months',
         'status',
+        'disbursement_method',
+        'payout_account',
         'application_reason',
         'approved_at',
         'rejected_at',
@@ -36,6 +38,11 @@ class Loan extends Model
         'monthly_installment' => 'decimal:2',
         'approved_at' => 'datetime',
         'rejected_at' => 'datetime',
+        'payout_account' => 'encrypted:array',
+    ];
+
+    protected $hidden = [
+        'payout_account',
     ];
 
     public function user()
