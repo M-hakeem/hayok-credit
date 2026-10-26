@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Loan;
 use App\Models\LoanDisbursement;
 use App\Models\RepaymentSchedule;
-use App\Services\Paystack\PaystackClient;
 use App\Services\Paystack\PaystackTransferService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -168,49 +167,6 @@ class LoanDisbursementController extends Controller
             'status' => 'success',
             'message' => 'Loan disbursed to the user wallet.',
             'data' => $disbursement,
-        ]);
-    }
-
-    public function confirmOtp(Request $request, $id, PaystackClient $client)
-    {
-        $data = $request->validate([
-            'otp' => ['required', 'digits:6'],
-        ]);
-
-        $disbursement = LoanDisbursement::where('loan_id', $id)->first();
-
-        if (! $disbursement) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'No disbursement record found for this loan.',
-            ], 404);
-        }
-
-        if ($disbursement->status !== 'processing' || ! $disbursement->transfer_code) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'This disbursement is not awaiting Paystack OTP confirmation.',
-            ], 422);
-        }
-
-        try {
-            $result = $client->finalizeTransfer($disbursement->transfer_code, $data['otp']);
-        } catch (\RuntimeException $exception) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $exception->getMessage(),
-            ], 422);
-        }
-
-        $disbursement->update(['gateway_response' => $result]);
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Paystack transfer OTP accepted. Awaiting transfer confirmation.',
-            'data' => [
-                'disbursement' => $disbursement->fresh(),
-                'transfer' => $result,
-            ],
         ]);
     }
 

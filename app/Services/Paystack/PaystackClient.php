@@ -59,14 +59,6 @@ class PaystackClient
         return $this->request('post', 'transfer', $payload);
     }
 
-    public function finalizeTransfer(string $transferCode, string $otp): array
-    {
-        return $this->request('post', 'transfer/finalize_transfer', [
-            'transfer_code' => $transferCode,
-            'otp' => $otp,
-        ]);
-    }
-
     public function verifyTransfer(string $reference): array
     {
         return $this->request('get', 'transfer/verify/'.rawurlencode($reference));
