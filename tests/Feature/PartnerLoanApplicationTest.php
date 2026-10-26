@@ -41,7 +41,6 @@ class PartnerLoanApplicationTest extends TestCase
                 'bank_name' => 'Test Bank',
                 'bank_account_number' => '0123456789',
                 'bank_account_name' => 'Test Applicant',
-                'bank_code' => '001',
                 'amount_requested' => 100000,
                 'term_months' => 12,
                 'guarantors' => [[
@@ -75,6 +74,7 @@ class PartnerLoanApplicationTest extends TestCase
         $this->assertSame('Ikeja', $address->lga);
         $this->assertSame('bank', $loan->disbursement_method);
         $this->assertSame('0123456789', $loan->payout_account['bank_account_number']);
+        $this->assertNull($loan->payout_account['bank_code']);
         $this->assertNotNull($guarantor->id_file_path);
         Storage::disk('public')->assertExists($guarantor->id_file_path);
 
@@ -86,7 +86,6 @@ class PartnerLoanApplicationTest extends TestCase
                 'bank_name' => 'Test Bank',
                 'bank_account_number' => '0123456789',
                 'bank_account_name' => 'Test Applicant',
-                'bank_code' => '001',
                 'amount_requested' => 100000,
                 'term_months' => 12,
                 'guarantors' => [[
@@ -108,7 +107,6 @@ class PartnerLoanApplicationTest extends TestCase
                 'bank_name' => 'Test Bank',
                 'bank_account_number' => '0123456789',
                 'bank_account_name' => 'Test Applicant',
-                'bank_code' => '001',
                 'residential_address' => '34 Legacy Address Road, Lagos',
                 'state' => 'Ogun',
                 'lga' => 'Abeokuta South',

@@ -81,7 +81,7 @@ class LoanDisbursementScheduleTest extends TestCase
             'bank_name' => 'Partner Bank',
             'bank_account_number' => '1111111111',
             'bank_account_name' => 'Partner User',
-            'bank_code' => '001',
+            'bank_code' => '999',
             'password' => 'secret1234',
             'role' => 'admin',
         ]);
@@ -96,20 +96,22 @@ class LoanDisbursementScheduleTest extends TestCase
             'term_months' => 3,
             'status' => 'approved',
             'disbursement_method' => 'bank',
-        ]);
-
-        $disbursement = LoanDisbursement::create([
-            'loan_id' => $loan->id,
-            'user_id' => $user->id,
-            'amount' => 30000,
-            'bank_name' => 'Partner Bank',
-            'bank_account_number' => '9876543210',
-            'bank_account_name' => 'Partner User',
-            'bank_code' => '001',
-            'status' => 'pending',
+            'payout_account' => [
+                'bank_name' => 'Partner Bank',
+                'bank_account_number' => '9876543210',
+                'bank_account_name' => 'Partner User',
+                'bank_code' => null,
+            ],
         ]);
 
         Http::fake([
+            'api.paystack.co/bank*' => Http::response([
+                'status' => true,
+                'data' => [[
+                    'name' => 'Partner Bank',
+                    'code' => '001',
+                ]],
+            ]),
             'api.paystack.co/transferrecipient' => Http::response([
                 'status' => true,
                 'data' => ['recipient_code' => 'RCP_partner'],
@@ -126,6 +128,7 @@ class LoanDisbursementScheduleTest extends TestCase
             ->assertJsonPath('data.disbursement.status', 'processing')
             ->assertJsonPath('data.transfer.transfer_code', 'TRF_partner');
 
+        $disbursement = LoanDisbursement::firstOrFail();
         $this->assertDatabaseHas('loan_disbursements', [
             'id' => $disbursement->id,
             'status' => 'processing',
@@ -139,6 +142,7 @@ class LoanDisbursementScheduleTest extends TestCase
         Http::assertSent(fn ($request) => str_contains($request->url(), 'transferrecipient')
             && $request['account_number'] === '9876543210'
             && $request['bank_code'] === '001');
+        $this->assertSame('001', $disbursement->fresh()->bank_code);
 
         config(['paystack.secret_key' => 'test-secret']);
         $payload = [
