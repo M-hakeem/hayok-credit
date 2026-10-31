@@ -2291,6 +2291,139 @@
                 ]
             }
         },
+        "/admin/disbursement-settings": {
+            "get": {
+                "operationId": "disbursementSetting.show",
+                "tags": [
+                    "DisbursementSetting"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "configured": {
+                                                    "type": "boolean"
+                                                },
+                                                "masked_debit_account_number": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "configured",
+                                                "masked_debit_account_number"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "operationId": "disbursementSetting.update",
+                "tags": [
+                    "DisbursementSetting"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "debit_account_number": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "debit_account_number"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "const": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Disbursement debit account updated successfully."
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "configured": {
+                                                    "type": "boolean"
+                                                },
+                                                "masked_debit_account_number": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "configured",
+                                                "masked_debit_account_number"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/employment": {
             "get": {
                 "operationId": "employment.index",
@@ -4050,24 +4183,96 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "const": "success"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Loan disbursed to the user wallet."
+                                                },
+                                                "data": {
+                                                    "$ref": "#/components/schemas/LoanDisbursement"
+                                                }
+                                            },
+                                            "required": [
+                                                "status",
+                                                "message",
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "const": "success"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Bank transfer completed successfully."
+                                                },
+                                                "data": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "disbursement": {
+                                                            "anyOf": [
+                                                                {
+                                                                    "$ref": "#/components/schemas/LoanDisbursement"
+                                                                },
+                                                                {
+                                                                    "type": "null"
+                                                                }
+                                                            ]
+                                                        },
+                                                        "transfer": {
+                                                            "type": "array",
+                                                            "items": {}
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "disbursement",
+                                                        "transfer"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "status",
+                                                "message",
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
                                     "type": "object",
                                     "properties": {
                                         "status": {
                                             "type": "string",
-                                            "const": "success"
+                                            "const": "error"
                                         },
                                         "message": {
                                             "type": "string",
-                                            "const": "Loan disbursed to the user wallet."
-                                        },
-                                        "data": {
-                                            "$ref": "#/components/schemas/LoanDisbursement"
+                                            "const": "Could not confirm the Claimify bank transfer. Check the disbursement status before retrying."
                                         }
                                     },
                                     "required": [
                                         "status",
-                                        "message",
-                                        "data"
+                                        "message"
                                     ]
                                 }
                             }
@@ -4079,6 +4284,22 @@
                             "application/json": {
                                 "schema": {
                                     "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "const": "error"
+                                                },
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "status",
+                                                "message"
+                                            ]
+                                        },
                                         {
                                             "type": "object",
                                             "properties": {
@@ -4132,120 +4353,6 @@
                                         "message": {
                                             "type": "string",
                                             "const": "No disbursement record found. Ensure the loan is approved first."
-                                        }
-                                    },
-                                    "required": [
-                                        "status",
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/AuthenticationException"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/admin/loans/{id}/disburse/confirm-otp": {
-            "post": {
-                "operationId": "loanDisbursement.confirmOtp",
-                "tags": [
-                    "LoanDisbursement"
-                ],
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "otp": {
-                                        "type": "string"
-                                    }
-                                },
-                                "required": [
-                                    "otp"
-                                ]
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "const": "success"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "const": "Paystack transfer OTP accepted. Awaiting transfer confirmation."
-                                        },
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "disbursement": {
-                                                    "type": "string"
-                                                },
-                                                "transfer": {
-                                                    "type": "array",
-                                                    "items": {}
-                                                }
-                                            },
-                                            "required": [
-                                                "disbursement",
-                                                "transfer"
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "status",
-                                        "message",
-                                        "data"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
-                    },
-                    "404": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "const": "error"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "const": "No disbursement record found for this loan."
                                         }
                                     },
                                     "required": [
@@ -8893,6 +9000,9 @@
                             "null"
                         ],
                         "format": "date-time"
+                    },
+                    "disbursement_method": {
+                        "type": "string"
                     }
                 },
                 "required": [
@@ -8914,7 +9024,8 @@
                     "risk_grade",
                     "created_at",
                     "updated_at",
-                    "deleted_at"
+                    "deleted_at",
+                    "disbursement_method"
                 ],
                 "title": "Loan"
             },
@@ -9395,25 +9506,16 @@
                         "maxLength": 11
                     },
                     "bank_name": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
+                        "type": "string",
                         "description": "Bank",
                         "maxLength": 255
                     },
                     "bank_account_number": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
+                        "type": "string",
                         "maxLength": 64
                     },
                     "bank_account_name": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
+                        "type": "string",
                         "maxLength": 255
                     },
                     "bank_code": {
@@ -9551,6 +9653,9 @@
                 "required": [
                     "organisation_name",
                     "phone_number",
+                    "bank_name",
+                    "bank_account_number",
+                    "bank_account_name",
                     "amount_requested",
                     "term_months"
                 ],

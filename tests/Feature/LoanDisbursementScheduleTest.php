@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Loan;
 use App\Models\LoanDisbursement;
+use App\Models\DisbursementSetting;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -11,6 +12,35 @@ use Tests\TestCase;
 
 class LoanDisbursementScheduleTest extends TestCase
 {
+    public function test_admin_can_save_and_view_only_a_masked_disbursement_debit_account(): void
+    {
+        $admin = User::create([
+            'fullname' => 'Admin User',
+            'email' => 'admin@example.com',
+            'phone_number' => '08012345671',
+            'password' => 'secret1234',
+            'role' => 'admin',
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->putJson('/api/admin/disbursement-settings', [
+                'debit_account_number' => '5012239031',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.configured', true)
+            ->assertJsonPath('data.masked_debit_account_number', '******9031');
+
+        $this->assertDatabaseMissing('disbursement_settings', [
+            'id' => 1,
+            'debit_account_number' => '5012239031',
+        ]);
+
+        $this->getJson('/api/admin/disbursement-settings')
+            ->assertOk()
+            ->assertJsonPath('data.configured', true)
+            ->assertJsonPath('data.masked_debit_account_number', '******9031');
+    }
+
     public function test_repayment_schedule_is_generated_at_disbursement()
     {
         $user = User::create([
@@ -86,6 +116,16 @@ class LoanDisbursementScheduleTest extends TestCase
             'role' => 'admin',
         ]);
 
+        DisbursementSetting::create([
+            'id' => 1,
+            'debit_account_number' => '5012239031',
+        ]);
+        config([
+            'services.claimify_wallet.base_url' => 'https://claimify-api.example.test/api/v1',
+            'services.claimify_wallet.email' => 'admin@example.test',
+            'services.claimify_wallet.password' => 'secret',
+        ]);
+
         $loan = Loan::create([
             'user_id' => $user->id,
             'amount_requested' => 30000,
@@ -100,67 +140,35 @@ class LoanDisbursementScheduleTest extends TestCase
                 'bank_name' => 'Partner Bank',
                 'bank_account_number' => '9876543210',
                 'bank_account_name' => 'Partner User',
-                'bank_code' => null,
+                'bank_code' => '999',
             ],
         ]);
 
         Http::fake([
-            'api.paystack.co/bank*' => Http::response([
-                'status' => true,
-                'data' => [[
-                    'name' => 'Partner Bank',
-                    'code' => '001',
-                ]],
+            'claimify-api.example.test/api/v1/auth/login' => Http::response([
+                'data' => ['access_token' => 'claimify-test-token'],
             ]),
-            'api.paystack.co/transferrecipient' => Http::response([
-                'status' => true,
-                'data' => ['recipient_code' => 'RCP_partner'],
+            'claimify-api.example.test/api/v1/auth/wallet/name-inquiry' => Http::response([
+                'data' => ['nameEnquiryReference' => 'name-enquiry-123'],
             ]),
-            'api.paystack.co/transfer' => Http::response([
-                'status' => true,
-                'data' => ['transfer_code' => 'TRF_partner', 'status' => 'pending'],
+            'claimify-api.example.test/api/v1/auth/wallet/transfer' => Http::response([
+                'status' => 'success',
+                'data' => ['transferReference' => 'claimify-transfer-123'],
             ]),
         ]);
 
         $this->actingAs($user, 'sanctum')
             ->postJson("/api/admin/loans/{$loan->id}/disburse")
-            ->assertStatus(202)
-            ->assertJsonPath('data.disbursement.status', 'processing')
-            ->assertJsonPath('data.transfer.transfer_code', 'TRF_partner');
+            ->assertOk()
+            ->assertJsonPath('data.disbursement.status', 'disbursed')
+            ->assertJsonPath('data.disbursement.provider', 'claimify')
+            ->assertJsonPath('data.transfer.data.transferReference', 'claimify-transfer-123');
 
         $disbursement = LoanDisbursement::firstOrFail();
         $this->assertDatabaseHas('loan_disbursements', [
             'id' => $disbursement->id,
-            'status' => 'processing',
-            'provider' => 'paystack',
-        ]);
-        $this->assertDatabaseHas('loans', [
-            'id' => $loan->id,
-            'status' => 'approved',
-        ]);
-        $this->assertDatabaseMissing('wallets', ['user_id' => $user->id]);
-        Http::assertSent(fn ($request) => str_contains($request->url(), 'transferrecipient')
-            && $request['account_number'] === '9876543210'
-            && $request['bank_code'] === '001');
-        $this->assertSame('001', $disbursement->fresh()->bank_code);
-
-        config(['paystack.secret_key' => 'test-secret']);
-        $payload = [
-            'event' => 'transfer.success',
-            'data' => [
-                'reference' => $disbursement->fresh()->provider_reference,
-                'transfer_code' => 'TRF_partner',
-            ],
-        ];
-        $signature = hash_hmac('sha512', json_encode($payload), 'test-secret');
-
-        $this->withHeaders(['x-paystack-signature' => $signature])
-            ->postJson('/api/paystack/webhook', $payload)
-            ->assertOk();
-
-        $this->assertDatabaseHas('loan_disbursements', [
-            'id' => $disbursement->id,
             'status' => 'disbursed',
+            'provider' => 'claimify',
         ]);
         $this->assertDatabaseHas('loans', [
             'id' => $loan->id,
@@ -168,6 +176,17 @@ class LoanDisbursementScheduleTest extends TestCase
         ]);
         $this->assertCount(3, $loan->fresh()->repaymentSchedules);
         $this->assertDatabaseMissing('wallets', ['user_id' => $user->id]);
+        $this->assertSame('999', $disbursement->fresh()->bank_code);
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/auth/wallet/transfer')
+            && $request['paymentReference'] === $disbursement->fresh()->provider_reference
+            && $request['nameEnquiryReference'] === 'name-enquiry-123'
+            && $request['debitAccountNumber'] === '5012239031'
+            && $request['beneficiaryBankCode'] === '999'
+            && $request['beneficiaryAccountNumber'] === '9876543210'
+            && (float) $request['amount'] === 30000.0
+            && $request['currency'] === 'NGN'
+            && $request['saveBeneficiary'] === true
+            && $request['userReward'] === false);
     }
 
     public function test_configured_term_rate_is_split_evenly_across_installments(): void

@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Loan;
 use App\Models\LoanDisbursement;
 use App\Models\RepaymentSchedule;
-use App\Services\Paystack\PaystackTransferService;
+use App\Services\ClaimifyLoanDisbursementService;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -57,7 +59,7 @@ class LoanDisbursementController extends Controller
         ]);
     }
 
-    public function disburse(Request $request, $id, PaystackTransferService $transferService)
+    public function disburse(Request $request, $id, ClaimifyLoanDisbursementService $transferService)
     {
         $disbursement = LoanDisbursement::with('loan.user.organisation')
             ->where('loan_id', $id)
@@ -116,22 +118,54 @@ class LoanDisbursementController extends Controller
                     'status' => 'error',
                     'message' => $exception->getMessage(),
                 ], 422);
+            } catch (RequestException $exception) {
+                $response = $exception->response;
+
+                return response()->json([
+                    'status' => 'error',
+                    'message' => data_get($response->json(), 'message', 'Claimify could not process the bank transfer.'),
+                ], $response->clientError() ? $response->status() : 502);
+            } catch (ConnectionException) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Could not confirm the Claimify bank transfer. Check the disbursement status before retrying.',
+                ], 502);
             }
+
+            $this->completeDisbursement($disbursement, $loan, false);
+            $this->notifyInsucare($disbursement, $loan);
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Bank transfer initiated. Awaiting Paystack confirmation.',
+                'message' => 'Bank transfer completed successfully.',
                 'data' => [
                     'disbursement' => $disbursement->fresh(),
                     'transfer' => $transfer,
                 ],
-            ], 202);
+            ]);
         }
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($disbursement, $loan) {
-            $disbursement->update(['status' => 'disbursed', 'disbursed_at' => now()]);
-            $disbursement->user->wallet()->firstOrCreate([], ['balance' => 0, 'currency' => 'NGN'])
-                ->credit((float) $disbursement->amount, 'Loan disbursement', 'loan-disbursement-'.$disbursement->id);
+        $this->completeDisbursement($disbursement, $loan, true);
+
+        $this->notifyInsucare($disbursement, $loan);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Loan disbursed to the user wallet.',
+            'data' => $disbursement,
+        ]);
+    }
+
+    private function completeDisbursement(LoanDisbursement $disbursement, Loan $loan, bool $creditWallet): void
+    {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($disbursement, $loan, $creditWallet) {
+            $disbursedAt = now();
+            $disbursement->update(['status' => 'disbursed', 'disbursed_at' => $disbursedAt]);
+
+            if ($creditWallet) {
+                $disbursement->user->wallet()->firstOrCreate([], ['balance' => 0, 'currency' => 'NGN'])
+                    ->credit((float) $disbursement->amount, 'Loan disbursement', 'loan-disbursement-'.$disbursement->id);
+            }
 
             if ($loan->repaymentSchedules()->count() === 0) {
                 $term = (int) $loan->term_months;
@@ -146,7 +180,7 @@ class LoanDisbursementController extends Controller
                     RepaymentSchedule::create([
                         'loan_id' => $loan->id,
                         'installment_number' => $installment,
-                        'due_date' => Carbon::parse($disbursement->disbursed_at)->addMonths($installment)->toDateString(),
+                        'due_date' => Carbon::parse($disbursedAt)->addMonths($installment)->toDateString(),
                         'principal_amount' => $principal,
                         'interest_amount' => $interest,
                         'penalty_amount' => 0,
@@ -160,14 +194,6 @@ class LoanDisbursementController extends Controller
 
             $loan->update(['status' => 'active']);
         });
-
-        $this->notifyInsucare($disbursement, $loan);
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Loan disbursed to the user wallet.',
-            'data' => $disbursement,
-        ]);
     }
 
     private function notifyInsucare(LoanDisbursement $disbursement, Loan $loan): void
