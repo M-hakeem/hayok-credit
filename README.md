@@ -97,9 +97,11 @@ php artisan schedule:work
 php artisan queue:work --tries=1
 ```
 
-Due installments are charged with Paystack authorization codes, retried according to the configured maximum and delay, and finalized through verified Paystack webhooks. Disbursements create Paystack transfer recipients and remain `processing` until a successful transfer webhook activates the loan and creates its repayment schedule.
+Due installments are charged with Paystack authorization codes, retried according to the configured maximum and delay, and finalized through verified Paystack webhooks.
 
-Before production, configure live keys, webhook delivery over HTTPS, queue supervision, scheduler supervision, Paystack transfer capability, sufficient Paystack balance, and alerting for failed repayments and transfers. Test all flows with Paystack test mode and HTTP-faked automated tests before switching keys.
+Bank loan disbursements use Claimify's `/auth/wallet/transfer` API. Configure `CLAIMIFY_WALLET_BASE_URL`, `CLAIMIFY_WALLET_EMAIL`, `CLAIMIFY_WALLET_PASSWORD`, and optionally `CLAIMIFY_WALLET_TIMEOUT` in the server environment. Before disbursing a bank loan, an administrator must save the reusable 10-digit source account under **Settings → Disbursement** in the admin dashboard. The source account is encrypted at rest and only its masked form is returned to the dashboard. Paystack remains in use for card payments, wallet deposits, and withdrawals.
+
+Before production, configure live Paystack keys, webhook delivery over HTTPS, Claimify credentials and transfer access, queue supervision, scheduler supervision, sufficient Paystack balance for Paystack-powered flows, and alerting for failed repayments and transfers. Test all flows with provider test environments and HTTP-faked automated tests before going live.
 
 ## First-time borrower loan limit
 

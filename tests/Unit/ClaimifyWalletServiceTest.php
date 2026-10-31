@@ -13,10 +13,14 @@ class ClaimifyWalletServiceTest extends TestCase
     {
         config([
             'services.claimify_wallet.base_url' => 'https://claimify-api.example.test/api/v1',
-            'services.claimify_wallet.token' => 'test-token',
+            'services.claimify_wallet.email' => 'admin@example.test',
+            'services.claimify_wallet.password' => 'secret',
         ]);
 
         Http::fake([
+            'claimify-api.example.test/api/v1/auth/login' => Http::response([
+                'data' => ['access_token' => 'test-token'],
+            ]),
             'claimify-api.example.test/*' => Http::response(['accountName' => 'Jane Doe']),
         ]);
 

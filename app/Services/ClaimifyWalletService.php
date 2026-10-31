@@ -78,6 +78,12 @@ class ClaimifyWalletService
     }
 
     /** @throws RequestException */
+    public function transfer(array $payload): array
+    {
+        return $this->client()->post('/auth/wallet/transfer', $payload)->throw()->json();
+    }
+
+    /** @throws RequestException */
     public function initiateVerification(string $type, string $number): array
     {
         return $this->client()->post('/auth/wallet/initiate_verification', [
