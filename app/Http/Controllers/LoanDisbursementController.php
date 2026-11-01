@@ -114,17 +114,35 @@ class LoanDisbursementController extends Controller
             try {
                 $transfer = $transferService->disburse($disbursement);
             } catch (\RuntimeException $exception) {
-                return response()->json([
+                $response = [
                     'status' => 'error',
                     'message' => $exception->getMessage(),
-                ], 422);
+                ];
+                if ($disbursement->fresh()->status === 'failed') {
+                    $response['data'] = ['disbursement' => $disbursement->fresh()];
+                }
+
+                return response()->json($response, 422);
             } catch (RequestException $exception) {
                 $response = $exception->response;
+                $message = data_get($response->json(), 'message', 'Claimify could not process the bank transfer.');
+                if ($response->clientError()) {
+                    $disbursement->update([
+                        'status' => 'failed',
+                        'failure_reason' => $message,
+                        'gateway_response' => $response->json(),
+                    ]);
+                }
 
-                return response()->json([
+                $errorResponse = [
                     'status' => 'error',
-                    'message' => data_get($response->json(), 'message', 'Claimify could not process the bank transfer.'),
-                ], $response->clientError() ? $response->status() : 502);
+                    'message' => $message,
+                ];
+                if ($response->clientError()) {
+                    $errorResponse['data'] = ['disbursement' => $disbursement->fresh()];
+                }
+
+                return response()->json($errorResponse, $response->clientError() ? $response->status() : 502);
             } catch (ConnectionException) {
                 return response()->json([
                     'status' => 'error',
