@@ -82,7 +82,14 @@ class ClaimifyLoanDisbursementService
         ]);
 
         if ($this->isFailedResponse($transfer)) {
-            throw new RuntimeException(data_get($transfer, 'message', 'Claimify could not process the bank transfer.'));
+            $message = $this->responseErrorMessage($transfer);
+            $disbursement->update([
+                'status' => 'failed',
+                'failure_reason' => $message,
+                'gateway_response' => $transfer,
+            ]);
+
+            throw new RuntimeException($message);
         }
 
         $disbursement->update([
@@ -196,9 +203,54 @@ class ClaimifyLoanDisbursementService
 
     private function isFailedResponse(array $response): bool
     {
-        return data_get($response, 'success') === false
-            || data_get($response, 'status') === false
-            || data_get($response, 'requestSuccessful') === false
-            || in_array(strtolower((string) data_get($response, 'status')), ['error', 'failed', 'failure'], true);
+        foreach ($this->responseArrays($response) as $data) {
+            if (
+                data_get($data, 'success') === false
+                || data_get($data, 'status') === false
+                || data_get($data, 'requestSuccessful') === false
+                || in_array(strtolower((string) data_get($data, 'status')), ['error', 'failed', 'failure'], true)
+            ) {
+                return true;
+            }
+
+            $statusCode = data_get($data, 'statusCode');
+            if (is_numeric($statusCode) && (int) $statusCode >= 400) {
+                return true;
+            }
+
+            $responseCode = data_get($data, 'responseCode');
+            if (
+                (is_string($responseCode) || is_numeric($responseCode))
+                && ! in_array((string) $responseCode, ['0', '00', '000', '200'], true)
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function responseErrorMessage(array $response): string
+    {
+        foreach ($this->responseArrays($response) as $data) {
+            $message = data_get($data, 'message');
+            if (is_string($message) && trim($message) !== '') {
+                return trim($message);
+            }
+        }
+
+        return 'Claimify could not process the bank transfer.';
+    }
+
+    private function responseArrays(array $response): array
+    {
+        $arrays = [$response];
+        foreach ($response as $value) {
+            if (is_array($value)) {
+                $arrays = array_merge($arrays, $this->responseArrays($value));
+            }
+        }
+
+        return $arrays;
     }
 }
