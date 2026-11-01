@@ -111,7 +111,7 @@ class LoanDisbursementScheduleTest extends TestCase
             'bank_name' => 'Partner Bank',
             'bank_account_number' => '1111111111',
             'bank_account_name' => 'Partner User',
-            'bank_code' => '999',
+            'bank_code' => null,
             'password' => 'secret1234',
             'role' => 'admin',
         ]);
@@ -140,13 +140,27 @@ class LoanDisbursementScheduleTest extends TestCase
                 'bank_name' => 'Partner Bank',
                 'bank_account_number' => '9876543210',
                 'bank_account_name' => 'Partner User',
-                'bank_code' => '999',
+                'bank_code' => null,
             ],
+        ]);
+
+        $staleDisbursement = LoanDisbursement::create([
+            'loan_id' => $loan->id,
+            'user_id' => $user->id,
+            'amount' => 30000,
+            'bank_name' => null,
+            'bank_account_number' => null,
+            'bank_account_name' => null,
+            'bank_code' => null,
+            'status' => 'pending',
         ]);
 
         Http::fake([
             'claimify-api.example.test/api/v1/auth/login' => Http::response([
                 'data' => ['access_token' => 'claimify-test-token'],
+            ]),
+            'claimify-api.example.test/api/v1/auth/wallet/banks' => Http::response([
+                'data' => [['name' => 'Partner Bank', 'code' => '999']],
             ]),
             'claimify-api.example.test/api/v1/auth/wallet/name-inquiry' => Http::response([
                 'data' => ['nameEnquiryReference' => 'name-enquiry-123'],
@@ -165,6 +179,7 @@ class LoanDisbursementScheduleTest extends TestCase
             ->assertJsonPath('data.transfer.data.transferReference', 'claimify-transfer-123');
 
         $disbursement = LoanDisbursement::firstOrFail();
+        $this->assertSame($staleDisbursement->id, $disbursement->id);
         $this->assertDatabaseHas('loan_disbursements', [
             'id' => $disbursement->id,
             'status' => 'disbursed',

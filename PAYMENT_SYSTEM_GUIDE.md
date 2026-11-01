@@ -25,7 +25,7 @@ Check Wallet Balance
 
 ## Loan Disbursement
 
-Loan applications submitted through the partner loan or business-loan endpoints are paid to the bank account supplied with that application. Partner applications must include the bank name, bank code, account name, and account number. The payout account is saved with the loan so later changes to the user's profile do not redirect the transfer. Bank transfers use Claimify's wallet-transfer API; the reusable debit account is configured under **Settings → Disbursement** in the admin dashboard and stored encrypted. After Claimify accepts a transfer, the loan becomes active and its repayment schedule is created. Paystack is not used for loan bank disbursements.
+Loan applications submitted through the partner loan or business-loan endpoints are paid to the bank account supplied with that application. Partner applications must include the beneficiary bank name, bank code, account name, and account number. The payout account is saved with the loan so later changes to the user's profile do not redirect the transfer. Bank transfers use Claimify's wallet-transfer API; the reusable debit (source) account is configured under **Settings → Disbursement** in the admin dashboard and stored encrypted. This source account is separate from the beneficiary details saved with the loan. After Claimify accepts a transfer, the loan becomes active and its repayment schedule is created. Paystack is not used for loan bank disbursements.
 
 Loans submitted independently are credited to the user's wallet when disbursed.
 
