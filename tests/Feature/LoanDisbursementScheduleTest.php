@@ -163,7 +163,7 @@ class LoanDisbursementScheduleTest extends TestCase
                 'data' => [['name' => 'Partner Bank', 'code' => '999']],
             ]),
             'claimify-api.example.test/api/v1/auth/wallet/name-inquiry' => Http::response([
-                'data' => ['nameEnquiryReference' => 'name-enquiry-123'],
+                'data' => ['sessionId' => 'name-enquiry-123'],
             ]),
             'claimify-api.example.test/api/v1/auth/wallet/transfer' => Http::response([
                 'status' => 'success',
