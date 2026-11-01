@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AddressController;
+use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\BusinessLoanApplicationController;
 use App\Http\Controllers\ClaimifyWalletController;
 use App\Http\Controllers\DashboardController;
@@ -83,6 +84,8 @@ Route::middleware('auth:sanctum')->get('loan-interest', [LoanInterestSettingCont
 
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
+    Route::get('profile', [AdminProfileController::class, 'show']);
+    Route::put('profile', [AdminProfileController::class, 'update']);
     Route::get('disbursement-settings', [DisbursementSettingController::class, 'show']);
     Route::put('disbursement-settings', [DisbursementSettingController::class, 'update']);
     Route::get('first-loan-limit', [FirstLoanLimitController::class, 'show']);
