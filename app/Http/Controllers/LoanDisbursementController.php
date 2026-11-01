@@ -94,20 +94,33 @@ class LoanDisbursementController extends Controller
             $disbursement->load('loan.user.organisation');
         }
 
-        if ($disbursement->status !== 'pending') {
+        $loan = $disbursement->loan;
+        $canRetryInsufficientFunds = $loan->disbursement_method === 'bank'
+            && $disbursement->status === 'failed'
+            && $this->isInsufficientFundsFailure($disbursement->failure_reason);
+
+        if ($disbursement->status !== 'pending' && ! $canRetryInsufficientFunds) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'This disbursement has already been processed.',
             ], 422);
         }
 
-        $loan = $disbursement->loan;
-
         if ($loan->status !== 'approved') {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Loan must be approved before it can be disbursed.',
             ], 422);
+        }
+
+        if ($canRetryInsufficientFunds) {
+            $disbursement->update([
+                'status' => 'pending',
+                'failure_reason' => null,
+                'provider_reference' => null,
+                'transfer_code' => null,
+            ]);
+            $disbursement->refresh();
         }
 
         if ($loan->disbursement_method === 'bank') {
@@ -212,6 +225,12 @@ class LoanDisbursementController extends Controller
 
             $loan->update(['status' => 'active']);
         });
+    }
+
+    private function isInsufficientFundsFailure(?string $failureReason): bool
+    {
+        return is_string($failureReason)
+            && preg_match('/(?:no\s+sufficient\s+funds|insufficient\s+funds)/i', $failureReason) === 1;
     }
 
     private function notifyInsucare(LoanDisbursement $disbursement, Loan $loan): void

@@ -8,6 +8,7 @@ use App\Models\DisbursementSetting;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class LoanDisbursementScheduleTest extends TestCase
@@ -202,6 +203,83 @@ class LoanDisbursementScheduleTest extends TestCase
             && $request['currency'] === 'NGN'
             && $request['saveBeneficiary'] === true
             && $request['userReward'] === false);
+    }
+
+    public function test_admin_can_retry_bank_disbursement_after_insufficient_funds_failure(): void
+    {
+        $admin = User::create([
+            'fullname' => 'Admin User',
+            'email' => 'retry-admin@example.com',
+            'phone_number' => '08012345672',
+            'password' => 'secret1234',
+            'role' => 'admin',
+        ]);
+        $loan = Loan::create([
+            'user_id' => $admin->id,
+            'amount_requested' => 30000,
+            'interest_rate' => 10,
+            'total_interest' => 3000,
+            'total_repayable' => 33000,
+            'monthly_installment' => 11000,
+            'term_months' => 3,
+            'status' => 'approved',
+            'disbursement_method' => 'bank',
+        ]);
+        $disbursement = LoanDisbursement::create([
+            'loan_id' => $loan->id,
+            'user_id' => $admin->id,
+            'amount' => 30000,
+            'bank_name' => 'Test Bank',
+            'bank_account_number' => '1234567890',
+            'bank_account_name' => 'Test User',
+            'bank_code' => '123',
+            'status' => 'pending',
+        ]);
+        DisbursementSetting::create([
+            'id' => 1,
+            'debit_account_number' => '5012239031',
+        ]);
+        Cache::forget('claimify_wallet.access_token');
+        config([
+            'services.claimify_wallet.base_url' => 'https://claimify-api.example.test/api/v1',
+            'services.claimify_wallet.email' => 'admin@example.test',
+            'services.claimify_wallet.password' => 'secret',
+        ]);
+        Http::fake([
+            'claimify-api.example.test/api/v1/auth/login' => Http::response([
+                'data' => ['access_token' => 'claimify-test-token'],
+            ]),
+            'claimify-api.example.test/api/v1/auth/wallet/name-inquiry' => Http::response([
+                'data' => ['sessionId' => 'name-enquiry-123'],
+            ]),
+            'claimify-api.example.test/api/v1/auth/wallet/transfer' => Http::sequence()
+                ->push([
+                    'message' => 'No sufficient funds',
+                    'statusCode' => 400,
+                    'responseCode' => '51',
+                ])
+                ->push([
+                    'status' => 'success',
+                    'data' => ['transferReference' => 'claimify-transfer-retry-123'],
+                ]),
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson("/api/admin/loans/{$loan->id}/disburse")
+            ->assertStatus(422)
+            ->assertJsonPath('data.disbursement.status', 'failed')
+            ->assertJsonPath('data.disbursement.failure_reason', 'No sufficient funds');
+
+        $firstReference = $disbursement->fresh()->provider_reference;
+
+        $this->postJson("/api/admin/loans/{$loan->id}/disburse")
+            ->assertOk()
+            ->assertJsonPath('data.disbursement.status', 'disbursed')
+            ->assertJsonPath('data.transfer.data.transferReference', 'claimify-transfer-retry-123');
+
+        $this->assertNotSame($firstReference, $disbursement->fresh()->provider_reference);
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/auth/wallet/transfer')
+            && $request['paymentReference'] === $disbursement->fresh()->provider_reference);
     }
 
     public function test_configured_term_rate_is_split_evenly_across_installments(): void
