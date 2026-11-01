@@ -18,6 +18,9 @@ class ClaimifyLoanDisbursementService
             throw new RuntimeException('This disbursement has already been processed or is in progress.');
         }
 
+        $disbursement->loadMissing('loan.user');
+        $this->restoreBeneficiaryDetails($disbursement);
+
         $debitAccountNumber = DisbursementSetting::query()->find(1)?->debit_account_number;
         if (! $debitAccountNumber) {
             throw new RuntimeException('Set the reusable debit account number in dashboard settings before disbursing loans.');
@@ -27,8 +30,18 @@ class ClaimifyLoanDisbursementService
             throw new RuntimeException('The configured debit account number must contain 10 digits.');
         }
 
-        if (! $disbursement->bank_code || ! $disbursement->bank_account_number) {
-            throw new RuntimeException('A validated Nigerian bank account is required for disbursement.');
+        if (! $disbursement->bank_account_number) {
+            throw new RuntimeException('The beneficiary account number is missing. Add the destination account number to the loan payout details or borrower profile.');
+        }
+
+        if (! $disbursement->bank_code) {
+            $bankCode = $this->resolveBankCode((string) $disbursement->bank_name);
+            if (! $bankCode) {
+                throw new RuntimeException('The beneficiary bank code is missing. Verify the destination bank name and bank code before disbursing.');
+            }
+
+            $disbursement->update(['bank_code' => $bankCode]);
+            $disbursement->refresh();
         }
 
         $reference = $disbursement->provider_reference
@@ -82,6 +95,69 @@ class ClaimifyLoanDisbursementService
         ]);
 
         return $transfer + ['reference' => $reference];
+    }
+
+    private function restoreBeneficiaryDetails(LoanDisbursement $disbursement): void
+    {
+        $loan = $disbursement->loan;
+        if (! $loan) {
+            return;
+        }
+
+        $payoutAccount = $loan->payout_account ?? [];
+        $user = $loan->user;
+        $updates = [];
+
+        foreach (['bank_name', 'bank_account_number', 'bank_account_name', 'bank_code'] as $field) {
+            $payoutValue = $payoutAccount[$field] ?? null;
+            $fallback = filled($payoutValue) ? $payoutValue : $user?->{$field};
+
+            if (blank($disbursement->{$field}) && filled($fallback)) {
+                $updates[$field] = $fallback;
+            }
+        }
+
+        if ($updates !== []) {
+            $disbursement->update($updates);
+            $disbursement->refresh();
+        }
+    }
+
+    private function resolveBankCode(string $bankName): ?string
+    {
+        if (blank($bankName)) {
+            return null;
+        }
+
+        $response = $this->claimify->banks();
+        $banks = data_get($response, 'data.banks')
+            ?? data_get($response, 'data')
+            ?? data_get($response, 'banks')
+            ?? [];
+
+        if (! is_array($banks)) {
+            return null;
+        }
+
+        foreach ($banks as $bank) {
+            if (! is_array($bank)) {
+                continue;
+            }
+
+            $name = $bank['name'] ?? $bank['bankName'] ?? $bank['bank_name'] ?? null;
+            $code = $bank['code'] ?? $bank['bankCode'] ?? $bank['bank_code'] ?? null;
+
+            if (
+                is_string($name)
+                && mb_strtolower(trim($name)) === mb_strtolower(trim($bankName))
+                && (is_string($code) || is_numeric($code))
+                && (string) $code !== ''
+            ) {
+                return (string) $code;
+            }
+        }
+
+        return null;
     }
 
     private function isFailedResponse(array $response): bool
