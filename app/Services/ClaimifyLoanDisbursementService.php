@@ -61,12 +61,7 @@ class ClaimifyLoanDisbursementService
             throw new RuntimeException(data_get($nameEnquiry, 'message', 'Claimify could not verify the beneficiary bank account.'));
         }
 
-        $nameEnquiryReference = data_get($nameEnquiry, 'data.nameEnquiryReference')
-            ?? data_get($nameEnquiry, 'data.name_enquiry_reference')
-            ?? data_get($nameEnquiry, 'nameEnquiryReference')
-            ?? data_get($nameEnquiry, 'name_enquiry_reference')
-            ?? data_get($nameEnquiry, 'data.reference')
-            ?? data_get($nameEnquiry, 'reference');
+        $nameEnquiryReference = $this->findNameEnquiryReference($nameEnquiry);
 
         if (! is_string($nameEnquiryReference) || $nameEnquiryReference === '') {
             throw new RuntimeException('Claimify did not return a name enquiry reference for the beneficiary account.');
@@ -158,6 +153,45 @@ class ClaimifyLoanDisbursementService
         }
 
         return null;
+    }
+
+    private function findNameEnquiryReference(array $response): ?string
+    {
+        $referenceKeys = [
+            'nameenquiryreference',
+            'nameenquiryref',
+            'sessionid',
+            'sessionreference',
+            'reference',
+        ];
+
+        $search = function (array $data) use (&$search, $referenceKeys): ?string {
+            foreach ($referenceKeys as $key) {
+                foreach ($data as $responseKey => $value) {
+                    if (
+                        is_string($responseKey)
+                        && preg_replace('/[^a-z]/', '', strtolower($responseKey)) === $key
+                        && (is_string($value) || is_numeric($value))
+                        && (string) $value !== ''
+                    ) {
+                        return (string) $value;
+                    }
+                }
+            }
+
+            foreach ($data as $value) {
+                if (is_array($value)) {
+                    $reference = $search($value);
+                    if ($reference !== null) {
+                        return $reference;
+                    }
+                }
+            }
+
+            return null;
+        };
+
+        return $search($response);
     }
 
     private function isFailedResponse(array $response): bool
