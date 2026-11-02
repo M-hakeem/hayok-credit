@@ -580,10 +580,15 @@
                                     "phone": {
                                         "type": "string",
                                         "description": "Phone number to send OTP to (e.g. +2347061234567)"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "description": "Email address to also send the same OTP to"
                                     }
                                 },
                                 "required": [
-                                    "phone"
+                                    "phone",
+                                    "email"
                                 ]
                             }
                         }

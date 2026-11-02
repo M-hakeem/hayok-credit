@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+use App\Mail\OtpMail;
 use App\Models\PhoneVerification;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class TermiiOtpService
 {
@@ -17,7 +20,7 @@ class TermiiOtpService
         return str_starts_with($phone, '00') ? '+'.substr($phone, 2) : $phone;
     }
 
-    public function requestOtp(string $phone, string $purpose = 'registration'): void
+    public function requestOtp(string $phone, string $purpose = 'registration', ?string $email = null): void
     {
         $phone = $this->normalizePhone($phone);
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
@@ -44,6 +47,10 @@ class TermiiOtpService
         $verification->update([
             'delivery_status' => $sent ? 'sent' : 'failed',
         ]);
+
+        if ($email !== null) {
+            $this->sendEmail($email, $otp);
+        }
     }
 
     public function verifyOtp(string $phone, string $otp): string
@@ -154,5 +161,33 @@ class TermiiOtpService
         }
 
         return $accepted;
+    }
+
+    private function sendEmail(string $email, string $otp): void
+    {
+        try {
+            Mail::to($email)->send(new OtpMail($otp));
+        } catch (TransportExceptionInterface $exception) {
+            $error = $exception->getMessage();
+            foreach (array_filter([
+                $otp,
+                $email,
+                config('mail.mailers.smtp.username'),
+                config('mail.mailers.smtp.password'),
+            ]) as $sensitiveValue) {
+                $error = str_replace($sensitiveValue, '[redacted]', $error);
+            }
+
+            Log::warning('OTP email SMTP delivery failed', [
+                'host' => config('mail.mailers.smtp.host'),
+                'exception' => substr($error, 0, 500),
+            ]);
+
+            return;
+        }
+
+        Log::info('SMTP accepted OTP email', [
+            'host' => config('mail.mailers.smtp.host'),
+        ]);
     }
 }
