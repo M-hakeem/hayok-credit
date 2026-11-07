@@ -2,24 +2,18 @@
 
 namespace Tests\Feature;
 
-use App\Mail\OtpMail;
 use App\Models\PhoneVerification;
 use App\Models\User;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class PhoneOtpTest extends TestCase
 {
-    private const OTP_EMAIL = 'borrower@example.com';
-
     protected function setUp(): void
     {
         parent::setUp();
-
-        Mail::fake();
 
         config([
             'services.termii.api_key' => 'test-api-key',
@@ -27,13 +21,6 @@ class PhoneOtpTest extends TestCase
             'services.termii.type' => 'plain',
             'services.termii.channel' => 'generic',
             'services.termii.url' => 'https://api.ng.termii.com/api/sms/send',
-            'mail.default' => 'smtp',
-            'mail.mailers.smtp.host' => 'live.smtp.mailtrap.io',
-            'mail.mailers.smtp.port' => 587,
-            'mail.mailers.smtp.username' => 'apismtp@mailtrap.io',
-            'mail.mailers.smtp.password' => 'test-smtp-password',
-            'mail.from.address' => 'support@example.com',
-            'mail.from.name' => 'Hayok Credit',
         ]);
     }
 
@@ -43,7 +30,6 @@ class PhoneOtpTest extends TestCase
 
         $response = $this->postJson('/api/auth/send-otp', [
             'phone' => '+234 706-123-4567',
-            'email' => self::OTP_EMAIL,
         ]);
         $request = $this->termiiRequests()->first()[0];
         $message = $request['sms'];
@@ -59,7 +45,6 @@ class PhoneOtpTest extends TestCase
         $this->assertSame('2347061234567', $request['to']);
         $this->assertSame('plain', $request['type']);
         $this->assertSame('generic', $request['channel']);
-        $this->assertOtpEmailSent($matches[1]);
         $this->assertCount(1, Http::recorded());
         $this->assertDatabaseHas('phone_verifications', [
             'phone_number' => '+2347061234567',
@@ -84,31 +69,14 @@ class PhoneOtpTest extends TestCase
 
         $this->postJson('/api/auth/send-otp', [
             'phone' => '+2347061234567',
-            'email' => self::OTP_EMAIL,
         ])->assertAccepted();
 
         $this->assertCount(1, $this->termiiRequests());
-        preg_match('/(\d{6})$/', $this->termiiRequests()->first()[0]['sms'], $matches);
-        $this->assertOtpEmailSent($matches[1]);
         $this->assertDatabaseHas('phone_verifications', [
             'phone_number' => '+2347061234567',
             'delivery_channel' => 'sms',
             'delivery_status' => 'failed',
         ]);
-    }
-
-    public function test_send_otp_requires_a_valid_email_address(): void
-    {
-        Http::fake();
-
-        $this->postJson('/api/auth/send-otp', [
-            'phone' => '+2347061234567',
-            'email' => 'not-an-email',
-        ])->assertUnprocessable()
-            ->assertJsonValidationErrors('email');
-
-        $this->assertCount(0, Http::recorded());
-        Mail::assertNothingOutgoing();
     }
 
     public function test_termii_api_key_is_sent_in_the_request_body(): void
@@ -117,7 +85,6 @@ class PhoneOtpTest extends TestCase
 
         $this->postJson('/api/auth/send-otp', [
             'phone' => '+2347061234567',
-            'email' => self::OTP_EMAIL,
         ])->assertAccepted();
 
         $request = $this->termiiRequests()->first()[0];
@@ -137,7 +104,6 @@ class PhoneOtpTest extends TestCase
 
         $this->postJson('/api/auth/send-otp', [
             'phone' => '+2347061234567',
-            'email' => self::OTP_EMAIL,
         ])->assertAccepted();
 
         $this->assertSame(
@@ -156,7 +122,6 @@ class PhoneOtpTest extends TestCase
 
         $this->postJson('/api/auth/send-otp', [
             'phone' => '+2347061234567',
-            'email' => self::OTP_EMAIL,
         ])->assertAccepted();
 
         $this->assertCount(0, $this->termiiRequests());
@@ -172,7 +137,6 @@ class PhoneOtpTest extends TestCase
 
         $this->postJson('/api/auth/send-otp', [
             'phone' => '+2347061234567',
-            'email' => self::OTP_EMAIL,
         ])->assertAccepted();
         $oldText = $this->termiiRequests()->first()[0]['sms'];
         preg_match('/(\d{6})$/', $oldText, $oldMatches);
@@ -228,11 +192,8 @@ class PhoneOtpTest extends TestCase
 
         $this->postJson('/api/auth/send-otp', [
             'phone' => '+2347061234567',
-            'email' => self::OTP_EMAIL,
         ])->assertAccepted();
 
-        Mail::assertSent(OtpMail::class, fn (OtpMail $mail) => $mail->hasTo(self::OTP_EMAIL)
-            && preg_match('/^\d{6}$/', $mail->otp) === 1);
         $this->assertDatabaseHas('phone_verifications', [
             'phone_number' => '+2347061234567',
             'delivery_channel' => 'sms',
@@ -255,11 +216,5 @@ class PhoneOtpTest extends TestCase
         return Http::recorded()->filter(
             fn (array $recorded) => str_contains($recorded[0]->url(), 'api.ng.termii.com')
         )->values();
-    }
-
-    private function assertOtpEmailSent(string $otp): void
-    {
-        Mail::assertSent(OtpMail::class, fn (OtpMail $mail) => $mail->hasTo(self::OTP_EMAIL)
-            && $mail->otp === $otp);
     }
 }

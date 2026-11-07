@@ -29,18 +29,16 @@ class AuthController extends Controller
      * Store a newly created resource in storage.
      */
     #[BodyParameter('phone', type: 'string', required: true, description: 'Phone number to send OTP to (e.g. +2347061234567)')]
-    #[BodyParameter('email', type: 'string', required: true, description: 'Email address to also send the same OTP to')]
     public function sendPhoneOtp(Request $request, TermiiOtpService $otpService)
     {
         $request->validate([
             'phone' => 'required|string|min:8|max:24',
-            'email' => 'required|email',
         ]);
 
         $phone = $otpService->normalizePhone($request->phone);
         $existingUser = User::where('phone_number', $request->phone)->orWhere('phone_number', $phone)->first();
         if (! $existingUser) {
-            $otpService->requestOtp($phone, 'registration', $request->email);
+            $otpService->requestOtp($phone, 'registration');
         }
 
         return response()->json([

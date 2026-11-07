@@ -2,17 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use App\Services\AccountLevelService;
 use App\Services\ClaimifyWalletService;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class ClaimifyWalletController extends Controller
 {
-    public function __construct(private readonly ClaimifyWalletService $claimify)
-    {
-    }
+    public function __construct(private readonly ClaimifyWalletService $claimify) {}
 
     public function banks()
     {
@@ -44,7 +45,7 @@ class ClaimifyWalletController extends Controller
         return $this->call(fn () => $this->claimify->initiateVerification($data['type'], $data['number']));
     }
 
-    public function validateVerification(Request $request)
+    public function validateVerification(Request $request, AccountLevelService $accountLevelService)
     {
         $data = $request->validate([
             'identity_id' => ['required', 'string', 'max:255'],
@@ -74,12 +75,41 @@ class ClaimifyWalletController extends Controller
             ], 422);
         }
 
+        if (! $this->hasComparableIdentityBiodata($response)) {
+            Cache::forget($this->pendingIdentityKey($request));
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'The identity provider did not return the required name, date of birth, and gender details.',
+            ], 422);
+        }
+
         $user = $request->user();
         $column = strtolower($data['type']);
-        $user->forceFill([
+        $attributes = [
             $column => $pendingIdentity['number'],
             $column.'_verified_at' => now(),
-        ])->save();
+        ];
+
+        $otherIdentityType = $data['type'] === 'BVN' ? 'NIN' : 'BVN';
+        $otherIdentityVerifiedAt = strtolower($otherIdentityType).'_verified_at';
+        if ($user->{$otherIdentityVerifiedAt} !== null
+            && ! $this->matchesVerifiedIdentityBiodata($response, $user, $otherIdentityType)) {
+            Cache::forget($this->pendingIdentityKey($request));
+
+            return response()->json([
+                'status' => 'error',
+                'message' => "{$data['type']} details do not match your previously verified {$otherIdentityType}.",
+            ], 422);
+        }
+
+        $attributes = array_merge(
+            $attributes,
+            $this->identityProfileAttributes($response, $user, $data['type'])
+        );
+
+        $user->forceFill($attributes)->save();
+        $accountLevelService->recalculate($user);
 
         Cache::put($this->verifiedIdentityKey($request), [
             'identity_id' => $data['identity_id'],
@@ -179,5 +209,182 @@ class ClaimifyWalletController extends Controller
             || data_get($response, 'status') === false
             || data_get($response, 'requestSuccessful') === false
             || in_array(strtolower((string) data_get($response, 'status')), ['error', 'failed', 'failure'], true);
+    }
+
+    private function identityProfileAttributes(array $response, User $user, string $identityType): array
+    {
+        $providerResponse = $this->getProviderResponse($response);
+        if (! is_array($providerResponse)) {
+            Log::warning("{$identityType} verification response did not include provider profile data", [
+                'user_id' => $user->id,
+            ]);
+
+            return [];
+        }
+
+        $columnPrefix = strtolower($identityType);
+        $firstName = $this->normalizedBiodataValue($providerResponse['firstName'] ?? null);
+        $middleName = $this->normalizedBiodataValue($providerResponse['middleName'] ?? null);
+        $lastName = $this->normalizedBiodataValue($providerResponse['lastName'] ?? null);
+        $firstName = mb_substr($firstName, 0, 255);
+        $middleName = mb_substr($middleName, 0, 255);
+        $lastName = mb_substr($lastName, 0, 255);
+        $nameParts = array_filter([$firstName, $middleName, $lastName]);
+        $fullname = implode(' ', $nameParts);
+        if ($fullname === '' && is_string($providerResponse['fullName'] ?? null)) {
+            $fullname = trim($providerResponse['fullName']);
+        }
+
+        $attributes = [
+            $columnPrefix.'_first_name' => $firstName !== '' ? $firstName : null,
+            $columnPrefix.'_middle_name' => $middleName !== '' ? $middleName : null,
+            $columnPrefix.'_last_name' => $lastName !== '' ? $lastName : null,
+            $columnPrefix.'_date_of_birth' => $this->normalizeDateOfBirth($providerResponse['dateOfBirth'] ?? $providerResponse['dob'] ?? null),
+            $columnPrefix.'_gender' => $this->normalizeGender($providerResponse['gender'] ?? null),
+        ];
+        if ($fullname !== '') {
+            $attributes['fullname'] = mb_substr($fullname, 0, 255);
+        }
+
+        if ($attributes[$columnPrefix.'_date_of_birth'] !== null) {
+            $attributes['dob'] = $attributes[$columnPrefix.'_date_of_birth'];
+        }
+
+        if ($attributes[$columnPrefix.'_gender'] !== null) {
+            $attributes['gender'] = $attributes[$columnPrefix.'_gender'];
+        }
+
+        $email = is_string($providerResponse['email'] ?? null)
+            ? strtolower(trim($providerResponse['email']))
+            : '';
+        if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $emailInUse = User::withTrashed()
+                ->where('email', $email)
+                ->where('id', '!=', $user->id)
+                ->exists();
+
+            if ($emailInUse) {
+                Log::warning("{$identityType} email is already assigned to another account; profile email was not updated", [
+                    'user_id' => $user->id,
+                ]);
+            } else {
+                $attributes['email'] = $email;
+            }
+        }
+
+        return $attributes;
+    }
+
+    private function matchesVerifiedIdentityBiodata(
+        array $response,
+        User $user,
+        string $otherIdentityType
+    ): bool {
+        $providerResponse = $this->getProviderResponse($response);
+        if (! is_array($providerResponse)) {
+            return false;
+        }
+
+        $currentIdentity = [
+            'first_name' => $this->normalizedBiodataValue($providerResponse['firstName'] ?? null),
+            'middle_name' => $this->normalizedBiodataValue($providerResponse['middleName'] ?? null),
+            'last_name' => $this->normalizedBiodataValue($providerResponse['lastName'] ?? null),
+            'date_of_birth' => $this->normalizeDateOfBirth($providerResponse['dateOfBirth'] ?? $providerResponse['dob'] ?? null),
+            'gender' => $this->normalizeGender($providerResponse['gender'] ?? null),
+        ];
+        $otherPrefix = strtolower($otherIdentityType);
+        $other = [
+            'first_name' => $user->{$otherPrefix.'_first_name'},
+            'middle_name' => $user->{$otherPrefix.'_middle_name'},
+            'last_name' => $user->{$otherPrefix.'_last_name'},
+            'date_of_birth' => $user->{$otherPrefix.'_date_of_birth'},
+            'gender' => $user->{$otherPrefix.'_gender'},
+        ];
+
+        if ($currentIdentity['first_name'] === ''
+            || $currentIdentity['last_name'] === ''
+            || $currentIdentity['date_of_birth'] === null
+            || $currentIdentity['gender'] === null
+            || ! filled($other['first_name'])
+            || ! filled($other['last_name'])
+            || ! filled($other['date_of_birth'])
+            || ! filled($other['gender'])) {
+            return false;
+        }
+
+        $namesMatch = $this->normalizeNameForComparison($currentIdentity['first_name'])
+                === $this->normalizeNameForComparison($other['first_name'])
+            && $this->normalizeNameForComparison($currentIdentity['last_name'])
+                === $this->normalizeNameForComparison($other['last_name']);
+
+        $middleNamesMatch = ! filled($currentIdentity['middle_name'])
+            || ! filled($other['middle_name'])
+            || $this->normalizeNameForComparison($currentIdentity['middle_name'])
+                === $this->normalizeNameForComparison($other['middle_name']);
+
+        return $namesMatch
+            && $middleNamesMatch
+            && $currentIdentity['date_of_birth'] === $other['date_of_birth']
+            && $currentIdentity['gender'] === $other['gender'];
+    }
+
+    private function hasComparableIdentityBiodata(array $response): bool
+    {
+        $providerResponse = $this->getProviderResponse($response);
+
+        return is_array($providerResponse)
+            && $this->normalizedBiodataValue($providerResponse['firstName'] ?? null) !== ''
+            && $this->normalizedBiodataValue($providerResponse['lastName'] ?? null) !== ''
+            && $this->normalizeDateOfBirth($providerResponse['dateOfBirth'] ?? $providerResponse['dob'] ?? null) !== null
+            && $this->normalizeGender($providerResponse['gender'] ?? null) !== null;
+    }
+
+    private function getProviderResponse(array $response): ?array
+    {
+        $providerResponse = data_get($response, 'data.token.data.providerResponse')
+            ?? data_get($response, 'data.data.token.data.providerResponse');
+
+        return is_array($providerResponse) ? $providerResponse : null;
+    }
+
+    private function normalizedBiodataValue(mixed $value): string
+    {
+        return is_string($value) ? trim(preg_replace('/\s+/', ' ', $value) ?? $value) : '';
+    }
+
+    private function normalizeNameForComparison(string $name): string
+    {
+        return mb_strtolower($this->normalizedBiodataValue($name));
+    }
+
+    private function normalizeDateOfBirth(mixed $dateOfBirth): ?string
+    {
+        if (! is_string($dateOfBirth)) {
+            return null;
+        }
+
+        $dateOfBirth = trim($dateOfBirth);
+        foreach (['Y-m-d', 'd-m-Y', 'd/m/Y'] as $format) {
+            $date = \DateTimeImmutable::createFromFormat('!'.$format, $dateOfBirth);
+            $errors = \DateTimeImmutable::getLastErrors();
+            if ($date && ($errors === false || ($errors['warning_count'] === 0 && $errors['error_count'] === 0))
+                && $date->format($format) === $dateOfBirth) {
+                return $date->format('Y-m-d');
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeGender(mixed $gender): ?string
+    {
+        $gender = mb_strtolower($this->normalizedBiodataValue($gender));
+
+        return match ($gender) {
+            'm', 'male' => 'male',
+            'f', 'female' => 'female',
+            'o', 'other' => 'other',
+            default => null,
+        };
     }
 }

@@ -70,22 +70,6 @@ TERMII_OTP_MAX_ATTEMPTS=5
 
 The OTP service sends SMS messages through Termii's `/api/sms/send` endpoint. Set `TERMII_API_KEY` and `TERMII_SENDER_ID` to the credentials and sender ID configured in Termii before enabling OTP delivery.
 
-## OTP Email Configuration
-
-`POST /api/auth/send-otp` requires both `phone` and `email`. It generates one OTP and sends that same code by Termii SMS and Mailtrap SMTP. Configure the SMTP credentials and a sender address on a verified domain in the backend `.env`:
-
-```env
-MAIL_MAILER=smtp
-MAIL_HOST=live.smtp.mailtrap.io
-MAIL_PORT=587
-MAIL_USERNAME=apismtp@mailtrap.io
-MAIL_PASSWORD=<Mailtrap SMTP password or API token>
-MAIL_FROM_ADDRESS=<verified sender address>
-MAIL_FROM_NAME="Hayok Credit"
-```
-
-Use the SMTP credentials shown in Mailtrap's sending setup and ensure the sender address belongs to a verified sending domain. Port 587 uses STARTTLS.
-
 ## Paystack Configuration
 
 Set the server-only credentials in `.env`:

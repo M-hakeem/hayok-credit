@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class UpdateProfileRequest extends FormRequest
@@ -16,15 +15,6 @@ class UpdateProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'fullname' => 'sometimes|string|max:255',
-            'dob' => 'sometimes|date',
-            'gender' => 'sometimes|string|in:male,female,other',
-            'email' => [
-                'sometimes',
-                'email',
-                'max:255',
-                Rule::unique('users', 'email')->ignore($this->user()),
-            ],
             'profile_image' => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:2048',
         ];
     }
@@ -32,13 +22,21 @@ class UpdateProfileRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            if ($validator->errors()->isNotEmpty() || $this->validated() !== []) {
+            $unsupportedFields = array_diff(array_keys($this->all()), ['profile_image']);
+            foreach ($unsupportedFields as $field) {
+                $validator->errors()->add(
+                    $field,
+                    'Personal details cannot be changed here. Use identity verification for personal details and the address endpoints with a utility bill for residential address changes.'
+                );
+            }
+
+            if ($validator->errors()->isNotEmpty() || $this->hasFile('profile_image')) {
                 return;
             }
 
             $validator->errors()->add(
                 'profile',
-                'Provide at least one supported profile field to update.'
+                'Provide a profile_image to update your profile.'
             );
         });
     }

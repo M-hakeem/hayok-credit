@@ -228,20 +228,10 @@ class UserController extends Controller
             'data' => [
                 'basic_profile' => [
                     'endpoint' => 'POST /api/user/update-profile',
-                    'description' => 'Update basic profile information. Use multipart/form-data and POST when uploading profile_image; PUT is supported for JSON-only edits.',
+                    'description' => 'Update only the profile picture. Personal details are populated through identity verification and cannot be edited here.',
                     'fields' => [
-                        'fullname' => 'Full name (string, max 255)',
-                        'dob' => 'Date of birth (date)',
-                        'gender' => 'Gender (male, female, other)',
-                        'email' => 'Email address (email, unique)',
-                        'phone_number' => 'Phone number (string, 10-20 chars)',
                         'profile_image' => 'Profile picture (image, jpg/jpeg/png/webp, max 2MB)',
                     ],
-                    'example' => [
-                        'fullname' => 'John Doe',
-                        'email' => 'john@example.com',
-                        'phone_number' => '08012345678',
-                    ]
                 ],
                 'address_management' => [
                     'endpoints' => [
@@ -250,7 +240,7 @@ class UserController extends Controller
                         'PUT /api/address/{id}' => 'Update address',
                         'DELETE /api/address/{id}' => 'Delete address',
                     ],
-                    'description' => 'Manage residential addresses with verification status',
+                    'description' => 'Manage residential addresses with verification status. Both adding and updating an address require a utility bill upload.',
                     'fields' => [
                         'residential_address' => 'Full address (string)',
                         'state' => 'State of residence (string)',
@@ -301,7 +291,7 @@ class UserController extends Controller
                         'POST /api/wallet/verification/validate' => 'Validate wallet verification',
                     ],
                     'description' => 'Verify NIN and BVN for KYC compliance',
-                    'note' => 'NIN and BVN are verified through wallet KYC endpoints, not through profile update'
+                    'note' => 'Either NIN or BVN may be verified first. Successful verification populates profile details. If both are verified, first and last names, date of birth, and gender must match; middle names must match when present in both records. Account level is tier_1 with either verified ID, tier_2 with both, and tier_3 with both plus an uploaded utility bill and employment bank statement. The profile_image is not populated from identity photos.'
                 ],
             ]
         ]);
