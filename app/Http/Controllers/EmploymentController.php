@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreEmploymentRequest;
 use App\Models\Employment;
+use App\Services\AccountLevelService;
 use Illuminate\Support\Facades\Storage;
 
 class EmploymentController extends Controller
@@ -21,7 +22,7 @@ class EmploymentController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data' => $employments
+            'data' => $employments,
         ]);
     }
 
@@ -36,7 +37,7 @@ class EmploymentController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreEmploymentRequest $request)
+    public function store(StoreEmploymentRequest $request, AccountLevelService $accountLevelService)
     {
         try {
             $user = auth()->user();
@@ -45,7 +46,7 @@ class EmploymentController extends Controller
             $bankStatementPath = null;
             if ($request->hasFile('bank_statement')) {
                 $file = $request->file('bank_statement');
-                $filename = time() . '_' . $user->id . '.' . $file->getClientOriginalExtension();
+                $filename = time().'_'.$user->id.'.'.$file->getClientOriginalExtension();
                 $bankStatementPath = $file->storeAs('bank_statements', $filename, 'public');
             }
 
@@ -59,6 +60,7 @@ class EmploymentController extends Controller
                 'bank_statement_path' => $bankStatementPath,
                 'verification_status' => 'pending',
             ]);
+            $accountLevelService->recalculate($user);
 
             return response()->json([
                 'status' => 'success',
@@ -70,14 +72,14 @@ class EmploymentController extends Controller
                     'income' => $employment->income,
                     'verification_status' => $employment->verification_status,
                     'created_at' => $employment->created_at,
-                ]
+                ],
             ], 201);
 
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to submit employment information',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -92,16 +94,16 @@ class EmploymentController extends Controller
             ? Employment::find($id)
             : Employment::where('user_id', $user->id)->find($id);
 
-        if (!$employment) {
+        if (! $employment) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Employment record not found'
+                'message' => 'Employment record not found',
             ], 404);
         }
 
         return response()->json([
             'status' => 'success',
-            'data' => $employment
+            'data' => $employment,
         ]);
     }
 
@@ -116,7 +118,7 @@ class EmploymentController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(StoreEmploymentRequest $request, string $id)
+    public function update(StoreEmploymentRequest $request, string $id, AccountLevelService $accountLevelService)
     {
         try {
             $user = auth()->user();
@@ -132,7 +134,7 @@ class EmploymentController extends Controller
                 }
 
                 $file = $request->file('bank_statement');
-                $filename = time() . '_' . $user->id . '.' . $file->getClientOriginalExtension();
+                $filename = time().'_'.$user->id.'.'.$file->getClientOriginalExtension();
                 $bankStatementPath = $file->storeAs('bank_statements', $filename, 'public');
                 $employment->bank_statement_path = $bankStatementPath;
                 $employment->verification_status = 'pending';
@@ -144,18 +146,19 @@ class EmploymentController extends Controller
                 'educational_details' => $request->educational_details,
                 'income' => $request->income,
             ]);
+            $accountLevelService->recalculate($user);
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Employment information updated successfully',
-                'data' => $employment
+                'data' => $employment,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to update employment information',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -163,25 +166,26 @@ class EmploymentController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(string $id, AccountLevelService $accountLevelService)
     {
         $user = auth()->user();
         $employment = $user->isAdmin()
             ? Employment::find($id)
             : Employment::where('user_id', $user->id)->find($id);
 
-        if (!$employment) {
+        if (! $employment) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Employment record not found'
+                'message' => 'Employment record not found',
             ], 404);
         }
 
         $employment->delete();
+        $accountLevelService->recalculate($user);
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Employment information deleted successfully'
+            'message' => 'Employment information deleted successfully',
         ]);
     }
 }

@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreAddressRequest;
 use App\Models\Address;
+use App\Services\AccountLevelService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class AddressController extends Controller
@@ -23,7 +23,7 @@ class AddressController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data' => $addresses
+            'data' => $addresses,
         ]);
     }
 
@@ -38,7 +38,7 @@ class AddressController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreAddressRequest $request)
+    public function store(StoreAddressRequest $request, AccountLevelService $accountLevelService)
     {
         try {
             $user = auth()->user();
@@ -47,7 +47,7 @@ class AddressController extends Controller
             $utilityBillPath = null;
             if ($request->hasFile('utility_bill')) {
                 $file = $request->file('utility_bill');
-                $filename = time() . '_' . $user->id . '.' . $file->getClientOriginalExtension();
+                $filename = time().'_'.$user->id.'.'.$file->getClientOriginalExtension();
                 $utilityBillPath = $file->storeAs('utility_bills', $filename, 'public');
             }
 
@@ -60,6 +60,7 @@ class AddressController extends Controller
                 'utility_bill_path' => $utilityBillPath,
                 'verification_status' => 'pending',
             ]);
+            $accountLevelService->recalculate($user);
 
             return response()->json([
                 'status' => 'success',
@@ -72,14 +73,14 @@ class AddressController extends Controller
                     'lga' => $address->lga,
                     'verification_status' => $address->verification_status,
                     'created_at' => $address->created_at,
-                ]
+                ],
             ], 201);
 
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to add address',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -97,12 +98,12 @@ class AddressController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data' => $address
+                'data' => $address,
             ]);
         } catch (ModelNotFoundException $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Address not found'
+                'message' => 'Address not found',
             ], 404);
         }
     }
@@ -118,7 +119,7 @@ class AddressController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(StoreAddressRequest $request, string $id)
+    public function update(StoreAddressRequest $request, string $id, AccountLevelService $accountLevelService)
     {
         try {
             $user = auth()->user();
@@ -134,7 +135,7 @@ class AddressController extends Controller
                 }
 
                 $file = $request->file('utility_bill');
-                $filename = time() . '_' . $user->id . '.' . $file->getClientOriginalExtension();
+                $filename = time().'_'.$user->id.'.'.$file->getClientOriginalExtension();
                 $utilityBillPath = $file->storeAs('utility_bills', $filename, 'public');
                 $address->utility_bill_path = $utilityBillPath;
                 $address->verification_status = 'pending';
@@ -145,18 +146,19 @@ class AddressController extends Controller
                 'state' => $request->state,
                 'lga' => $request->lga,
             ]);
+            $accountLevelService->recalculate($user);
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Address updated successfully',
-                'data' => $address
+                'data' => $address,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to update address',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -164,7 +166,7 @@ class AddressController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(string $id, AccountLevelService $accountLevelService)
     {
         try {
             $user = auth()->user();
@@ -172,15 +174,16 @@ class AddressController extends Controller
                 ? Address::findOrFail($id)
                 : Address::where('user_id', $user->id)->findOrFail($id);
             $address->delete();
+            $accountLevelService->recalculate($user);
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Address deleted successfully'
+                'message' => 'Address deleted successfully',
             ]);
         } catch (ModelNotFoundException $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Address not found'
+                'message' => 'Address not found',
             ], 404);
         }
     }

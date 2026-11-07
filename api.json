@@ -580,15 +580,10 @@
                                     "phone": {
                                         "type": "string",
                                         "description": "Phone number to send OTP to (e.g. +2347061234567)"
-                                    },
-                                    "email": {
-                                        "type": "string",
-                                        "description": "Email address to also send the same OTP to"
                                     }
                                 },
                                 "required": [
-                                    "phone",
-                                    "email"
+                                    "phone"
                                 ]
                             }
                         }
@@ -6875,65 +6870,30 @@
                                                         },
                                                         "description": {
                                                             "type": "string",
-                                                            "const": "Update basic profile information. Use multipart/form-data and POST when uploading profile_image; PUT is supported for JSON-only edits."
+                                                            "const": "Update only the profile picture. Personal details are populated through identity verification and cannot be edited here."
                                                         },
                                                         "fields": {
                                                             "type": "object",
                                                             "properties": {
-                                                                "fullname": {
-                                                                    "type": "string",
-                                                                    "const": "Full name (string, max 255)"
-                                                                },
-                                                                "dob": {
-                                                                    "type": "string",
-                                                                    "const": "Date of birth (date)"
-                                                                },
-                                                                "gender": {
-                                                                    "type": "string",
-                                                                    "const": "Gender (male, female, other)"
-                                                                },
-                                                                "email": {
-                                                                    "type": "string",
-                                                                    "const": "Email address (email, unique)"
-                                                                },
-                                                                "phone_number": {
-                                                                    "type": "string",
-                                                                    "const": "Phone number (string, 10-20 chars)"
-                                                                },
                                                                 "profile_image": {
                                                                     "type": "string",
                                                                     "const": "Profile picture (image, jpg/jpeg/png/webp, max 2MB)"
                                                                 }
                                                             },
                                                             "required": [
-                                                                "fullname",
-                                                                "dob",
-                                                                "gender",
-                                                                "email",
-                                                                "phone_number",
                                                                 "profile_image"
                                                             ]
                                                         },
                                                         "example": {
                                                             "type": "object",
                                                             "properties": {
-                                                                "fullname": {
+                                                                "profile_image": {
                                                                     "type": "string",
-                                                                    "const": "John Doe"
-                                                                },
-                                                                "email": {
-                                                                    "type": "string",
-                                                                    "const": "john@example.com"
-                                                                },
-                                                                "phone_number": {
-                                                                    "type": "string",
-                                                                    "const": "08012345678"
+                                                                    "const": "Upload a jpg, jpeg, png, or webp image (max 2MB)"
                                                                 }
                                                             },
                                                             "required": [
-                                                                "fullname",
-                                                                "email",
-                                                                "phone_number"
+                                                                "profile_image"
                                                             ]
                                                         }
                                                     },
@@ -6976,7 +6936,7 @@
                                                         },
                                                         "description": {
                                                             "type": "string",
-                                                            "const": "Manage residential addresses with verification status"
+                                                            "const": "Manage residential addresses with verification status. Both adding and updating an address require a utility bill upload."
                                                         },
                                                         "fields": {
                                                             "type": "object",
@@ -7209,7 +7169,7 @@
                                                         },
                                                         "note": {
                                                             "type": "string",
-                                                            "const": "NIN and BVN are verified through wallet KYC endpoints, not through profile update"
+                                                            "const": "Either NIN or BVN may be verified first. Successful verification populates profile details. If both are verified, first and last names, date of birth, and gender must match; middle names must match when present in both records. Account level is tier_1 with either verified ID, tier_2 with both, and tier_3 with both plus an uploaded utility bill and employment bank statement. The profile_image is not populated from identity photos."
                                                         }
                                                     },
                                                     "required": [
@@ -10693,27 +10653,6 @@
             "UpdateProfileRequest": {
                 "type": "object",
                 "properties": {
-                    "fullname": {
-                        "type": "string",
-                        "maxLength": 255
-                    },
-                    "dob": {
-                        "type": "string",
-                        "format": "date-time"
-                    },
-                    "gender": {
-                        "type": "string",
-                        "enum": [
-                            "male",
-                            "female",
-                            "other"
-                        ]
-                    },
-                    "email": {
-                        "type": "string",
-                        "format": "email",
-                        "maxLength": 255
-                    },
                     "profile_image": {
                         "type": "string",
                         "format": "binary",
