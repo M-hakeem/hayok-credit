@@ -254,9 +254,11 @@ class ClaimifyWalletController extends Controller
             $attributes['gender'] = $attributes[$columnPrefix.'_gender'];
         }
 
-        $email = is_string($providerResponse['email'] ?? null)
-            ? strtolower(trim($providerResponse['email']))
-            : '';
+        $emailValue = $providerResponse['email']
+            ?? $providerResponse['emailAddress']
+            ?? $providerResponse['email_address']
+            ?? null;
+        $email = is_string($emailValue) ? strtolower(trim($emailValue)) : '';
         if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $emailInUse = User::withTrashed()
                 ->where('email', $email)

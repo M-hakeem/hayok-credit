@@ -40,7 +40,7 @@ class BvnProfileSyncTest extends TestCase
                                 'lastName' => 'Doe',
                                 'gender' => 'Female',
                                 'dateOfBirth' => '1996-10-11',
-                                'email' => 'JANE.DOE@example.test',
+                                'emailAddress' => 'JANE.DOE@example.test',
                                 'base64Image' => 'ignored-photo-data',
                             ],
                         ],
