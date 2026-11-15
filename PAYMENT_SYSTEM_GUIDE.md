@@ -31,6 +31,41 @@ Loans submitted independently are credited to the user's wallet when disbursed.
 
 ## API Endpoints
 
+### Transaction PIN
+
+The authenticated mobile client must collect the user's four-digit PIN before every loan repayment and wallet withdrawal. The API validates the PIN itself; client-side prompts are not a security check. PINs are stored as password hashes and are never returned by the API.
+
+```
+GET /api/user/pin
+```
+
+Returns `{ "status": "success", "data": { "has_pin": true } }` without exposing the PIN or its hash.
+
+Set a PIN for the first time, or change it by providing the current PIN:
+
+```
+POST /api/user/pin
+{
+  "pin": "0123",
+  "pin_confirmation": "0123",
+  "current_pin": "9876"
+}
+```
+
+`current_pin` is omitted only for first-time setup. To reset a forgotten PIN, first request a code to the user's verified phone number, then submit that code with the new PIN:
+
+```
+POST /api/user/pin/reset-otp
+POST /api/user/pin/reset
+{
+  "otp": "123456",
+  "pin": "0123",
+  "pin_confirmation": "0123"
+}
+```
+
+Include `"pin": "0123"` in requests to both `POST /api/user/loans/{loanId}/payments` and `POST /api/user/wallet/withdraw`. The PIN must be a four-character numeric string so leading zeroes are preserved. Five incorrect PIN entries trigger a 15-minute lockout; OTP reset codes expire and are single-use.
+
 ### Wallet Management
 
 #### View Wallet & Bank Details
@@ -211,6 +246,7 @@ Requirements:
 Request Body:
 {
   "amount": 10000.00,
+  "pin": "0123",
   "description": "Withdrawal to bank"
 }
 
@@ -275,6 +311,7 @@ POST /api/user/loans/{loanId}/payments
 Request Body:
 {
   "amount_paid": 5000.00,
+  "pin": "0123",
   "payment_reference": "ref-payment-123",
   "payment_method": "auto"  // "auto" (default), "wallet", or "card"
 }

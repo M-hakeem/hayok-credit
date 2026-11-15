@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -53,6 +54,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'transaction_pin_hash',
         'bank_account_number',
         'bvn_first_name',
         'bvn_middle_name',
@@ -106,6 +108,18 @@ class User extends Authenticatable
         return Attribute::get(fn () => $this->profile_image
             ? asset('storage/'.$this->profile_image)
             : null);
+    }
+
+    public function hasTransactionPin(): bool
+    {
+        return filled($this->transaction_pin_hash);
+    }
+
+    public function setTransactionPin(string $pin): void
+    {
+        $this->forceFill([
+            'transaction_pin_hash' => Hash::make($pin),
+        ])->save();
     }
 
     public function organisation()

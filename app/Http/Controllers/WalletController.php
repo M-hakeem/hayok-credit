@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Withdrawal;
 use App\Services\Paystack\WalletDepositService;
 use App\Services\Paystack\WalletWithdrawalService;
+use App\Services\TransactionPinService;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Http\Request;
 use RuntimeException;
@@ -109,13 +110,17 @@ class WalletController extends Controller
     }
 
     #[BodyParameter('amount', type: 'number', required: true, description: 'Amount to withdraw in NGN (min 1)')]
+    #[BodyParameter('pin', type: 'string', required: true, description: 'Four-digit transaction PIN')]
     #[BodyParameter('description', type: 'string', required: false, description: 'Withdrawal description (max 255 chars)')]
-    public function withdraw(Request $request, WalletWithdrawalService $service)
+    public function withdraw(Request $request, WalletWithdrawalService $service, TransactionPinService $pinService)
     {
         $data = $request->validate([
             'amount' => 'required|numeric|decimal:0,2|min:1|max:9999999999.99',
+            'pin' => ['required', 'string', 'regex:/^[0-9]{4}$/'],
             'description' => 'nullable|string|max:255',
         ]);
+
+        $pinService->verify($request->user(), $data['pin']);
 
         try {
             $withdrawal = $service->requestWithdrawal(auth()->user(), $data['amount'], $data['description'] ?? null);

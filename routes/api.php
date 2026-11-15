@@ -20,6 +20,7 @@ use App\Http\Controllers\PaystackBankController;
 use App\Http\Controllers\PaystackPaymentController;
 use App\Http\Controllers\PaystackWebhookController;
 use App\Http\Controllers\Users\AuthController;
+use App\Http\Controllers\Users\TransactionPinController;
 use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\WalletController;
 use Illuminate\Support\Facades\Route;
@@ -45,6 +46,10 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
 
     // Wallet routes must come before the {id} wildcard
     Route::get('wallet', [WalletController::class, 'show']);
+    Route::get('pin', [TransactionPinController::class, 'show']);
+    Route::post('pin', [TransactionPinController::class, 'store']);
+    Route::post('pin/reset-otp', [TransactionPinController::class, 'sendResetOtp'])->middleware('throttle:transaction-pin-reset-otp');
+    Route::post('pin/reset', [TransactionPinController::class, 'reset'])->middleware('throttle:transaction-pin-reset');
     Route::get('wallet/transactions', [WalletController::class, 'transactions']);
     Route::get('wallet/withdrawals', [WalletController::class, 'withdrawals']);
     Route::get('wallet/payment-methods', [WalletController::class, 'paymentMethods']);

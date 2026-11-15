@@ -115,7 +115,9 @@ class UserController extends Controller
             ], 404);
         }
 
-        $wallet->load('transactions');
+        $wallet->load([
+            'transactions' => fn ($query) => $query->orderByDesc('created_at'),
+        ]);
 
         return response()->json([
             'status' => 'success',

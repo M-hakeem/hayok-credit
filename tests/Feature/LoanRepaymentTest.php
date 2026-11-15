@@ -52,6 +52,7 @@ class LoanRepaymentTest extends TestCase
             'balance' => 0,
             'currency' => 'NGN',
         ]);
+        $user->setTransactionPin('1234');
 
         $this->actingAs($user, 'sanctum')
             ->postJson("/api/admin/loans/{$loan->id}/disburse")
@@ -62,6 +63,7 @@ class LoanRepaymentTest extends TestCase
         $response = $this->actingAs($user, 'sanctum')
             ->postJson("/api/user/loans/{$loan->id}/payments", [
                 'amount_paid' => 11000.00,
+                'pin' => '1234',
                 'payment_method' => 'wallet',
                 'payment_reference' => 'repay-001',
             ]);
