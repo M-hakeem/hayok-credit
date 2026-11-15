@@ -23,6 +23,7 @@ class WalletWithdrawalTest extends TestCase
             'bank_code' => '001',
             'bank_connected_at' => now(),
         ]);
+        $user->setTransactionPin('1234');
         Wallet::create([
             'user_id' => $user->id,
             'balance' => 5000,
@@ -50,13 +51,18 @@ class WalletWithdrawalTest extends TestCase
         ]);
     }
 
+    private function withdraw(User $user, array $data)
+    {
+        return $this->actingAs($user, 'sanctum')
+            ->postJson('/api/user/wallet/withdraw', ['pin' => '1234'] + $data);
+    }
+
     public function test_withdrawal_initiates_transfer_and_reserves_balance_until_provider_confirmation(): void
     {
         $user = $this->user();
         $this->fakeRecipientAndTransfer();
 
-        $response = $this->actingAs($user, 'sanctum')
-            ->postJson('/api/user/wallet/withdraw', ['amount' => 1250, 'description' => 'Cash out']);
+        $response = $this->withdraw($user, ['amount' => 1250, 'description' => 'Cash out']);
 
         $response->assertStatus(202)
             ->assertJsonPath('data.withdrawal.status', 'processing')
@@ -84,8 +90,7 @@ class WalletWithdrawalTest extends TestCase
     {
         $user = $this->user();
         $this->fakeRecipientAndTransfer();
-        $this->actingAs($user, 'sanctum')
-            ->postJson('/api/user/wallet/withdraw', ['amount' => 1250])
+        $this->withdraw($user, ['amount' => 1250])
             ->assertStatus(202);
         $withdrawal = Withdrawal::firstOrFail();
         config(['paystack.secret_key' => 'test-secret']);
@@ -105,8 +110,7 @@ class WalletWithdrawalTest extends TestCase
     {
         $user = $this->user();
         $this->fakeRecipientAndTransfer();
-        $this->actingAs($user, 'sanctum')
-            ->postJson('/api/user/wallet/withdraw', ['amount' => 1250])
+        $this->withdraw($user, ['amount' => 1250])
             ->assertStatus(202);
         $withdrawal = Withdrawal::firstOrFail();
         config(['paystack.secret_key' => 'test-secret']);
@@ -133,8 +137,7 @@ class WalletWithdrawalTest extends TestCase
     {
         $user = $this->user();
         $this->fakeRecipientAndTransfer();
-        $this->actingAs($user, 'sanctum')
-            ->postJson('/api/user/wallet/withdraw', ['amount' => 1250])
+        $this->withdraw($user, ['amount' => 1250])
             ->assertStatus(202);
         $withdrawal = Withdrawal::firstOrFail();
         Http::fake([
@@ -161,8 +164,7 @@ class WalletWithdrawalTest extends TestCase
     {
         $user = $this->user();
         $this->fakeRecipientAndTransfer();
-        $this->actingAs($user, 'sanctum')
-            ->postJson('/api/user/wallet/withdraw', ['amount' => 1250])
+        $this->withdraw($user, ['amount' => 1250])
             ->assertStatus(202);
         $withdrawal = Withdrawal::firstOrFail();
         config(['paystack.secret_key' => 'test-secret']);
@@ -185,8 +187,7 @@ class WalletWithdrawalTest extends TestCase
         $user = $this->user();
         $user->update(['bank_connected_at' => null]);
 
-        $this->actingAs($user, 'sanctum')
-            ->postJson('/api/user/wallet/withdraw', ['amount' => 1250])
+        $this->withdraw($user, ['amount' => 1250])
             ->assertUnprocessable();
 
         $this->assertDatabaseHas('wallets', ['user_id' => $user->id, 'balance' => 5000]);
@@ -198,8 +199,7 @@ class WalletWithdrawalTest extends TestCase
         $user = $this->user();
         $this->fakeRecipientAndTransfer();
 
-        $this->actingAs($user, 'sanctum')
-            ->postJson('/api/user/wallet/withdraw', ['amount' => 6000])
+        $this->withdraw($user, ['amount' => 6000])
             ->assertUnprocessable();
 
         $this->assertDatabaseHas('wallets', ['user_id' => $user->id, 'balance' => 5000]);

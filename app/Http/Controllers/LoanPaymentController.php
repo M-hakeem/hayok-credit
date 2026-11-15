@@ -6,6 +6,7 @@ use App\Models\Loan;
 use App\Models\LoanPayment;
 use App\Models\RepaymentSchedule;
 use App\Services\PaymentService;
+use App\Services\TransactionPinService;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Http\Request;
 
@@ -64,13 +65,15 @@ class LoanPaymentController extends Controller
     }
 
     #[BodyParameter('amount_paid', type: 'number', required: true, description: 'Amount being paid for this installment (min 0.01)')]
+    #[BodyParameter('pin', type: 'string', required: true, description: 'Four-digit transaction PIN')]
     #[BodyParameter('payment_reference', type: 'string', required: false, description: 'Payment reference string (max 255 chars)')]
     #[BodyParameter('payment_method', type: 'string', required: false, description: 'Uses the wallet first, then a saved card for any remaining amount.')]
-    public function store(Request $request, $loanId, PaymentService $paymentService)
+    public function store(Request $request, $loanId, PaymentService $paymentService, TransactionPinService $pinService)
     {
-        $request->validate([
+        $data = $request->validate([
             'payment_reference' => 'nullable|string|max:255',
             'amount_paid' => 'required|numeric|min:0.01',
+            'pin' => ['required', 'string', 'regex:/^[0-9]{4}$/'],
             'payment_method' => 'nullable|in:wallet,card,auto',
         ]);
 
@@ -104,12 +107,14 @@ class LoanPaymentController extends Controller
             ], 404);
         }
 
+        $pinService->verify($user, $data['pin']);
+
         try {
             $payment = $paymentService->processLoanPayment(
                 $user,
                 $schedule,
-                (float) $request->amount_paid,
-                $request->payment_reference,
+                (float) $data['amount_paid'],
+                $data['payment_reference'] ?? null,
             );
 
             return response()->json([

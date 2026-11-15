@@ -64,6 +64,20 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        RateLimiter::for('transaction-pin-reset-otp', function (Request $request) {
+            return [
+                Limit::perMinutes(10, 3)->by('transaction-pin-reset-user:'.$request->user()?->getAuthIdentifier()),
+                Limit::perMinutes(10, 10)->by('transaction-pin-reset-ip:'.$request->ip()),
+            ];
+        });
+
+        RateLimiter::for('transaction-pin-reset', function (Request $request) {
+            return [
+                Limit::perMinutes(10, 6)->by('transaction-pin-reset-user:'.$request->user()?->getAuthIdentifier()),
+                Limit::perMinutes(10, 30)->by('transaction-pin-reset-ip:'.$request->ip()),
+            ];
+        });
+
         // Max 5 login attempts per IP per minute — prevents credential stuffing
         RateLimiter::for('login', function (Request $request) {
             return Limit::perMinute(5)
