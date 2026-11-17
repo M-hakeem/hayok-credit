@@ -29,16 +29,18 @@ class AuthController extends Controller
      * Store a newly created resource in storage.
      */
     #[BodyParameter('phone', type: 'string', required: true, description: 'Phone number to send OTP to (e.g. +2347061234567)')]
+    #[BodyParameter('channel', type: 'string', required: false, description: 'OTP delivery channel: sms (default) or whatsapp')]
     public function sendPhoneOtp(Request $request, TermiiOtpService $otpService)
     {
-        $request->validate([
+        $data = $request->validate([
             'phone' => 'required|string|min:8|max:24',
+            'channel' => 'sometimes|in:sms,whatsapp',
         ]);
 
         $phone = $otpService->normalizePhone($request->phone);
         $existingUser = User::where('phone_number', $request->phone)->orWhere('phone_number', $phone)->first();
         if (! $existingUser) {
-            $otpService->requestOtp($phone, 'registration');
+            $otpService->requestOtp($phone, 'registration', $data['channel'] ?? 'sms');
         }
 
         return response()->json([
@@ -49,20 +51,22 @@ class AuthController extends Controller
 
     public function resendPhoneOtp(Request $request, TermiiOtpService $otpService)
     {
-        $request->validate([
+        $data = $request->validate([
             'phone' => 'required_without:phone_number|string|min:8|max:24',
             'phone_number' => 'required_without:phone|string|min:8|max:24',
+            'channel' => 'sometimes|in:sms,whatsapp',
         ]);
 
         $rawPhone = $request->input('phone', $request->input('phone_number'));
         $phone = $otpService->normalizePhone($rawPhone);
         $existingUser = User::where('phone_number', $rawPhone)->orWhere('phone_number', $phone)->first();
         $verification = PhoneVerification::where('phone_number', $phone)->first();
+        $channel = $data['channel'] ?? $verification?->delivery_channel ?? 'sms';
 
         if (! $existingUser) {
-            $otpService->requestOtp($phone);
+            $otpService->requestOtp($phone, 'registration', $channel);
         } elseif ($existingUser->password && $verification?->purpose === 'password_reset') {
-            $otpService->requestOtp($phone, 'password_reset');
+            $otpService->requestOtp($phone, 'password_reset', $channel);
         }
 
         return response()->json([

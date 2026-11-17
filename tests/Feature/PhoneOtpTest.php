@@ -21,6 +21,9 @@ class PhoneOtpTest extends TestCase
             'services.termii.type' => 'plain',
             'services.termii.channel' => 'generic',
             'services.termii.url' => 'https://api.ng.termii.com/api/sms/send',
+            'services.termii.whatsapp_url' => 'https://api.ng.termii.com/api/send/template',
+            'services.termii.whatsapp_device_id' => 'test-device-id',
+            'services.termii.whatsapp_template_id' => 'test-otp-template',
         ]);
     }
 
@@ -61,6 +64,54 @@ class PhoneOtpTest extends TestCase
             'phone' => '+2347061234567',
             'pin' => $matches[1],
         ])->assertOk()->assertJsonPath('status', 'success');
+    }
+
+    public function test_it_can_send_and_resend_an_otp_over_whatsapp(): void
+    {
+        $this->fakeProviders();
+
+        $this->postJson('/api/auth/send-otp', [
+            'phone' => '+2347061234567',
+            'channel' => 'whatsapp',
+        ])->assertAccepted();
+
+        $request = $this->termiiRequests()->first()[0];
+        $this->assertSame('https://api.ng.termii.com/api/send/template', $request->url());
+        $this->assertSame('2347061234567', $request['phone_number']);
+        $this->assertSame('test-device-id', $request['device_id']);
+        $this->assertSame('test-otp-template', $request['template_id']);
+        $this->assertMatchesRegularExpression('/^\d{6}$/', $request['data']['otp']);
+        $this->assertDatabaseHas('phone_verifications', [
+            'phone_number' => '+2347061234567',
+            'delivery_channel' => 'whatsapp',
+            'delivery_status' => 'sent',
+        ]);
+
+        $this->postJson('/api/auth/resend-otp', [
+            'phone' => '+2347061234567',
+        ])->assertAccepted();
+
+        $this->assertSame(
+            'https://api.ng.termii.com/api/send/template',
+            $this->termiiRequests()->last()[0]->url()
+        );
+        $this->assertDatabaseHas('phone_verifications', [
+            'phone_number' => '+2347061234567',
+            'delivery_channel' => 'whatsapp',
+        ]);
+    }
+
+    public function test_it_rejects_unsupported_otp_delivery_channels(): void
+    {
+        $this->fakeProviders();
+
+        $this->postJson('/api/auth/send-otp', [
+            'phone' => '+2347061234567',
+            'channel' => 'email',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('channel');
+
+        $this->assertCount(0, $this->termiiRequests());
     }
 
     public function test_provider_rejection_marks_otp_delivery_failed(): void
