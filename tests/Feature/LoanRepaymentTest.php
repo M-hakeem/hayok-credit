@@ -11,6 +11,74 @@ use Tests\TestCase;
 
 class LoanRepaymentTest extends TestCase
 {
+    public function test_user_can_pay_the_full_remaining_loan_from_wallet()
+    {
+        $user = User::create([
+            'fullname' => 'Full Payoff User',
+            'email' => 'full-payoff@example.com',
+            'phone_number' => '08087654320',
+            'password' => 'secret1234',
+            'role' => 'user',
+        ]);
+        $user->wallet()->create([
+            'balance' => 21500,
+            'currency' => 'NGN',
+        ]);
+        $user->setTransactionPin('0811');
+
+        $loan = Loan::create([
+            'user_id' => $user->id,
+            'amount_requested' => 20000,
+            'interest_rate' => 7.5,
+            'total_interest' => 1500,
+            'total_repayable' => 21500,
+            'monthly_installment' => 3583.33,
+            'term_months' => 6,
+            'status' => 'active',
+            'application_reason' => 'Full payoff test',
+        ]);
+
+        $principalPerInstallment = round(20000 / 6, 2);
+        $interestPerInstallment = round(1500 / 6, 2);
+
+        for ($number = 1; $number <= 6; $number++) {
+            $principal = $number === 6
+                ? round(20000 - $principalPerInstallment * 5, 2)
+                : $principalPerInstallment;
+            $interest = $number === 6
+                ? round(1500 - $interestPerInstallment * 5, 2)
+                : $interestPerInstallment;
+
+            RepaymentSchedule::create([
+                'loan_id' => $loan->id,
+                'installment_number' => $number,
+                'due_date' => now()->addMonths($number)->toDateString(),
+                'principal_amount' => $principal,
+                'interest_amount' => $interest,
+                'penalty_amount' => 0,
+                'total_due' => round($principal + $interest, 2),
+                'amount_paid' => 0,
+                'balance_due' => round($principal + $interest, 2),
+                'status' => 'pending',
+            ]);
+        }
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/user/loans/{$loan->id}/payments", [
+                'amount_paid' => '21500',
+                'pin' => '0811',
+                'payment_reference' => '0987654365432345678',
+                'payment_method' => 'wallet',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('message', 'Loan paid successfully.');
+
+        $this->assertSame('completed', $loan->fresh()->status);
+        $this->assertSame(0, $loan->repaymentSchedules()->where('balance_due', '>', 0)->count());
+        $this->assertSame(6, $loan->repaymentSchedules()->where('status', 'paid')->count());
+    }
+
     public function test_user_can_repay_installment_using_wallet_and_loan_closes()
     {
         $user = User::create([
