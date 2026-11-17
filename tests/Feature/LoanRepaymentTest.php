@@ -122,12 +122,40 @@ class LoanRepaymentTest extends TestCase
             'status' => 'partial',
         ]);
 
+        LoanPayment::create([
+            'loan_id' => $loan->id,
+            'repayment_schedule_id' => $loan->repaymentSchedules()->where('installment_number', 2)->value('id'),
+            'user_id' => $user->id,
+            'due_date' => now()->addMonth()->toDateString(),
+            'amount_due' => 1062.50,
+            'amount_paid' => 1062.50,
+            'paid_at' => now(),
+            'status' => 'partial',
+            'payment_reference' => 'partial-payment',
+        ]);
+
         $this->actingAs($user, 'sanctum')
             ->getJson('/api/user/loans')
             ->assertOk()
             ->assertJsonPath('data.0.balance_due', '250.00')
             ->assertJsonFragment([
                 'installment_number' => 2,
+                'balance_due' => '250.00',
+            ])
+            ->assertJsonFragment([
+                'payment_reference' => 'partial-payment',
+                'amount_due' => '1062.50',
+                'installment_total_due' => '1312.50',
+                'balance_due' => '250.00',
+            ]);
+
+        $this->getJson("/api/user/loans/{$loan->id}")
+            ->assertOk()
+            ->assertJsonPath('data.balance_due', '250.00')
+            ->assertJsonFragment([
+                'payment_reference' => 'partial-payment',
+                'amount_due' => '1062.50',
+                'installment_total_due' => '1312.50',
                 'balance_due' => '250.00',
             ]);
     }
