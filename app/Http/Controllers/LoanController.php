@@ -188,6 +188,8 @@ class LoanController extends Controller
             ], 404);
         }
 
+        $this->appendCalculatedBalanceDue($loan);
+
         return response()->json([
             'status' => 'success',
             'data'   => $loan,
