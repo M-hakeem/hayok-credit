@@ -52,7 +52,7 @@ In order to ensure that the Laravel community is welcoming to all, please review
 
 ## Security Vulnerabilities
 
-## Termii OTP SMS Configuration
+## Termii OTP Delivery Configuration
 
 Configure the Termii API key and an approved sender ID in the backend `.env`:
 
@@ -62,13 +62,16 @@ TERMII_SENDER_ID=
 TERMII_TYPE=plain
 TERMII_CHANNEL=generic
 TERMII_URL=https://api.ng.termii.com/api/sms/send
+TERMII_WHATSAPP_URL=https://api.ng.termii.com/api/send/template
+TERMII_WHATSAPP_DEVICE_ID=
+TERMII_WHATSAPP_TEMPLATE_ID=
 TERMII_TIMEOUT=10
 TERMII_CONNECT_TIMEOUT=5
 TERMII_OTP_TTL_MINUTES=5
 TERMII_OTP_MAX_ATTEMPTS=5
 ```
 
-The OTP service sends SMS messages through Termii's `/api/sms/send` endpoint. Set `TERMII_API_KEY` and `TERMII_SENDER_ID` to the credentials and sender ID configured in Termii before enabling OTP delivery.
+The OTP service sends SMS through Termii's `/api/sms/send` endpoint. WhatsApp authentication OTPs use Termii's `/api/send/template` endpoint, which requires the WhatsApp device ID and approved authentication template ID from your Termii dashboard. Set `TERMII_API_KEY` and `TERMII_SENDER_ID` for SMS, and configure `TERMII_WHATSAPP_DEVICE_ID` and `TERMII_WHATSAPP_TEMPLATE_ID` for WhatsApp. `POST /api/auth/send-otp` accepts an optional `channel` field with `sms` (default) or `whatsapp`; the choice is stored with the OTP and reused by `POST /api/auth/resend-otp` unless a different channel is supplied. See [Termii's WhatsApp Template API](https://developers.termii.com/templates) for details.
 
 ## Paystack Configuration
 

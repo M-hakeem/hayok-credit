@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Loan;
 use App\Models\LoanDisbursement;
 use App\Models\LoanPayment;
+use App\Models\RepaymentSchedule;
 use App\Models\User;
 use Tests\TestCase;
 
@@ -73,5 +74,61 @@ class LoanRepaymentTest extends TestCase
         $payment = LoanPayment::where('loan_id', $loan->id)->first();
         $this->assertSame('paid', $payment->status);
         $this->assertSame('completed', $payment->loan->fresh()->status);
+    }
+
+    public function test_user_loan_list_calculates_remaining_balance_from_schedules()
+    {
+        $user = User::create([
+            'fullname' => 'Loan Balance User',
+            'email' => 'balance@example.com',
+            'phone_number' => '08087654322',
+            'password' => 'secret1234',
+            'role' => 'admin',
+        ]);
+
+        $loan = Loan::create([
+            'user_id' => $user->id,
+            'amount_requested' => 5000.00,
+            'interest_rate' => 5.00,
+            'total_interest' => 250.00,
+            'total_repayable' => 5250.00,
+            'monthly_installment' => 1312.50,
+            'term_months' => 4,
+            'status' => 'active',
+            'application_reason' => 'Loan balance calculation',
+        ]);
+
+        RepaymentSchedule::create([
+            'loan_id' => $loan->id,
+            'installment_number' => 1,
+            'due_date' => now()->toDateString(),
+            'principal_amount' => 1250.00,
+            'interest_amount' => 62.50,
+            'total_due' => 1312.50,
+            'amount_paid' => 1312.50,
+            'balance_due' => 0.00,
+            'status' => 'paid',
+        ]);
+
+        RepaymentSchedule::create([
+            'loan_id' => $loan->id,
+            'installment_number' => 2,
+            'due_date' => now()->addMonth()->toDateString(),
+            'principal_amount' => 1250.00,
+            'interest_amount' => 62.50,
+            'total_due' => 1312.50,
+            'amount_paid' => 1062.50,
+            'balance_due' => 0.00,
+            'status' => 'partial',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/user/loans')
+            ->assertOk()
+            ->assertJsonPath('data.0.balance_due', '250.00')
+            ->assertJsonFragment([
+                'installment_number' => 2,
+                'balance_due' => '250.00',
+            ]);
     }
 }

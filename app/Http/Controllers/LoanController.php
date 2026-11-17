@@ -22,6 +22,8 @@ class LoanController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        $loans->each(fn (Loan $loan) => $this->appendCalculatedBalanceDue($loan));
+
         return response()->json([
             'status' => 'success',
             'data' => $loans,
@@ -127,10 +129,30 @@ class LoanController extends Controller
             ], 404);
         }
 
+        $this->appendCalculatedBalanceDue($loan);
+
         return response()->json([
             'status' => 'success',
             'data' => $loan
         ]);
+    }
+
+    private function appendCalculatedBalanceDue(Loan $loan): void
+    {
+        $balanceDueCents = 0;
+
+        foreach ($loan->repaymentSchedules as $schedule) {
+            $scheduleBalanceCents = max(
+                0,
+                (int) round((float) $schedule->total_due * 100)
+                    - (int) round((float) $schedule->amount_paid * 100)
+            );
+
+            $schedule->setAttribute('balance_due', number_format($scheduleBalanceCents / 100, 2, '.', ''));
+            $balanceDueCents += $scheduleBalanceCents;
+        }
+
+        $loan->setAttribute('balance_due', number_format($balanceDueCents / 100, 2, '.', ''));
     }
 
     public function adminIndex()
