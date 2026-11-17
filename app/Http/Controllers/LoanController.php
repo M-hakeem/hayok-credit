@@ -140,6 +140,7 @@ class LoanController extends Controller
     private function appendCalculatedBalanceDue(Loan $loan): void
     {
         $balanceDueCents = 0;
+        $schedules = $loan->repaymentSchedules->keyBy('id');
 
         foreach ($loan->repaymentSchedules as $schedule) {
             $scheduleBalanceCents = max(
@@ -150,6 +151,15 @@ class LoanController extends Controller
 
             $schedule->setAttribute('balance_due', number_format($scheduleBalanceCents / 100, 2, '.', ''));
             $balanceDueCents += $scheduleBalanceCents;
+        }
+
+        foreach ($loan->payments as $payment) {
+            $schedule = $schedules->get($payment->repayment_schedule_id);
+
+            if ($schedule) {
+                $payment->setAttribute('installment_total_due', $schedule->total_due);
+                $payment->setAttribute('balance_due', $schedule->balance_due);
+            }
         }
 
         $loan->setAttribute('balance_due', number_format($balanceDueCents / 100, 2, '.', ''));
