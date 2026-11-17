@@ -14,9 +14,24 @@ class LoanPaymentController extends Controller
 {
     public function adminIndex()
     {
-        $payments = LoanPayment::with(['loan', 'user'])
+        $payments = LoanPayment::with(['loan', 'user', 'repaymentSchedule'])
             ->orderBy('created_at', 'desc')
             ->get();
+
+        $payments->each(function (LoanPayment $payment) {
+            $schedule = $payment->repaymentSchedule;
+
+            if (! $schedule) {
+                return;
+            }
+
+            $totalDueCents = (int) round((float) $schedule->total_due * 100);
+            $amountPaidCents = (int) round((float) $schedule->amount_paid * 100);
+            $balanceDueCents = max(0, $totalDueCents - $amountPaidCents);
+
+            $payment->setAttribute('installment_total_due', number_format($totalDueCents / 100, 2, '.', ''));
+            $payment->setAttribute('balance_due', number_format($balanceDueCents / 100, 2, '.', ''));
+        });
 
         return response()->json([
             'status' => 'success',

@@ -158,5 +158,24 @@ class LoanRepaymentTest extends TestCase
                 'installment_total_due' => '1312.50',
                 'balance_due' => '250.00',
             ]);
+
+        $this->getJson('/api/admin/loan-payments')
+            ->assertOk()
+            ->assertJsonFragment([
+                'payment_reference' => 'partial-payment',
+                'amount_due' => '1062.50',
+                'amount_paid' => '1062.50',
+                'installment_total_due' => '1312.50',
+                'balance_due' => '250.00',
+            ]);
+
+        $this->getJson("/api/admin/loans/{$loan->id}")
+            ->assertOk()
+            ->assertJsonPath('data.balance_due', '250.00')
+            ->assertJsonFragment([
+                'payment_reference' => 'partial-payment',
+                'installment_total_due' => '1312.50',
+                'balance_due' => '250.00',
+            ]);
     }
 }
