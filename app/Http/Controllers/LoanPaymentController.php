@@ -134,9 +134,11 @@ class LoanPaymentController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => $payment->status === 'pending'
-                    ? 'Wallet portion applied. Card payment is awaiting Paystack confirmation.'
-                    : 'Installment paid successfully.',
+                'message' => $payment->metadata['full_loan_payoff'] ?? false
+                    ? 'Loan paid successfully.'
+                    : ($payment->status === 'pending'
+                        ? 'Wallet portion applied. Card payment is awaiting Paystack confirmation.'
+                        : 'Installment paid successfully.'),
                 'data' => $payment,
             ]);
         } catch (\Exception $exception) {

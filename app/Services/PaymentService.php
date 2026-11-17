@@ -35,8 +35,29 @@ class PaymentService
                 throw new \RuntimeException('Payment amount must be greater than zero.');
             }
 
-            if ($amountPaid > (float) $schedule->balance_due) {
-                throw new \RuntimeException('Payment amount cannot exceed the installment balance.');
+            $amountPaidCents = (int) round($amountPaid * 100);
+            $firstBalanceCents = (int) round((float) $schedule->balance_due * 100);
+            $remainingSchedules = $loan->repaymentSchedules()
+                ->whereIn('status', ['pending', 'partial'])
+                ->orderBy('installment_number')
+                ->lockForUpdate()
+                ->get();
+            $remainingLoanBalanceCents = $remainingSchedules->sum(
+                fn (RepaymentSchedule $item) => (int) round((float) $item->balance_due * 100)
+            );
+
+            if ($amountPaidCents > $firstBalanceCents && $amountPaidCents === $remainingLoanBalanceCents) {
+                return $this->processFullLoanPayment(
+                    $user,
+                    $loan,
+                    $remainingSchedules,
+                    $amountPaidCents,
+                    $paymentReference
+                );
+            }
+
+            if ($amountPaidCents > $firstBalanceCents) {
+                throw new \RuntimeException('A full-loan payoff must equal the remaining loan balance of NGN '.number_format($remainingLoanBalanceCents / 100, 2, '.', '').'.');
             }
 
             $wallet = $user->wallet;
@@ -121,5 +142,66 @@ class PaymentService
 
             return $payment;
         });
+    }
+
+    private function processFullLoanPayment(
+        User $user,
+        $loan,
+        $remainingSchedules,
+        int $amountPaidCents,
+        ?string $paymentReference
+    ): LoanPayment {
+        $wallet = $user->wallet;
+        $walletBalanceCents = (int) round((float) ($wallet?->balance ?? 0) * 100);
+
+        if (! $wallet || $walletBalanceCents < $amountPaidCents) {
+            throw new \RuntimeException('Insufficient wallet balance for full-loan payoff.');
+        }
+
+        $wallet->debit($amountPaidCents / 100, 'Full loan repayment', $paymentReference);
+
+        $remainingCents = $amountPaidCents;
+        $firstPayment = null;
+
+        foreach ($remainingSchedules as $schedule) {
+            $balanceCents = (int) round((float) $schedule->balance_due * 100);
+            $allocatedCents = min($remainingCents, $balanceCents);
+
+            if ($allocatedCents <= 0) {
+                continue;
+            }
+
+            $payment = LoanPayment::create([
+                'loan_id' => $loan->id,
+                'repayment_schedule_id' => $schedule->id,
+                'user_id' => $user->id,
+                'due_date' => $schedule->due_date,
+                'amount_due' => $allocatedCents / 100,
+                'amount_paid' => $allocatedCents / 100,
+                'paid_at' => now(),
+                'status' => 'paid',
+                'payment_reference' => $paymentReference,
+                'provider' => null,
+                'metadata' => [
+                    'payment_method' => 'wallet',
+                    'full_loan_payoff' => true,
+                    'wallet_amount' => $amountPaidCents / 100,
+                    'card_amount' => 0,
+                ],
+            ]);
+
+            $schedule->update([
+                'amount_paid' => $schedule->total_due,
+                'balance_due' => 0,
+                'status' => 'paid',
+            ]);
+
+            $firstPayment ??= $payment;
+            $remainingCents -= $allocatedCents;
+        }
+
+        $loan->update(['status' => 'completed']);
+
+        return $firstPayment;
     }
 }
