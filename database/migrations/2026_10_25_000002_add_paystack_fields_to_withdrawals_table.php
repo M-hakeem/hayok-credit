@@ -9,11 +9,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('withdrawals', function (Blueprint $table) {
-            $table->string('paystack_reference')->nullable()->unique();
-            $table->string('paystack_recipient_code')->nullable();
-            $table->string('transfer_code')->nullable();
-            $table->string('failure_reason')->nullable();
-            $table->json('gateway_response')->nullable();
+            $table->string('paystack_reference')->nullable()->unique()->after('processed_at');
+            $table->string('paystack_recipient_code')->nullable()->after('paystack_reference');
+            $table->string('transfer_code')->nullable()->after('paystack_recipient_code');
+            $table->string('failure_reason')->nullable()->after('transfer_code');
+            $table->json('gateway_response')->nullable()->after('failure_reason');
         });
     }
 

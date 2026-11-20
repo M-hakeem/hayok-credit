@@ -9,11 +9,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('repayment_schedules', function (Blueprint $table) {
-            $table->timestamp('paid_at')->nullable();
-            $table->unsignedTinyInteger('retry_count')->default(0);
-            $table->timestamp('last_attempt_at')->nullable();
-            $table->timestamp('next_attempt_at')->nullable();
-            $table->string('failure_reason')->nullable();
+            $table->timestamp('paid_at')->nullable()->after('status');
+            $table->unsignedTinyInteger('retry_count')->default(0)->after('paid_at');
+            $table->timestamp('last_attempt_at')->nullable()->after('retry_count');
+            $table->timestamp('next_attempt_at')->nullable()->after('last_attempt_at');
+            $table->string('failure_reason')->nullable()->after('next_attempt_at');
             $table->index(['status', 'due_date', 'next_attempt_at']);
         });
     }

@@ -16,7 +16,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('loan_disbursements', function (Blueprint $table) {
-            $table->string('transaction_reference')->nullable();
+            $table->string('transaction_reference')->nullable()->after('status');
         });
     }
 };
