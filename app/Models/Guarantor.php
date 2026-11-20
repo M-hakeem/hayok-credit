@@ -17,6 +17,7 @@ class Guarantor extends Model
         'phone_number',
         'id_type',
         'id_file_path',
+        'verification_status',
     ];
 
     protected $casts = [

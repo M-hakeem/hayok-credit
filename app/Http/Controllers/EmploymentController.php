@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreEmploymentRequest;
 use App\Models\Employment;
 use App\Services\AccountLevelService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class EmploymentController extends Controller
@@ -122,9 +123,13 @@ class EmploymentController extends Controller
     {
         try {
             $user = auth()->user();
-            $employment = $user->isAdmin()
-                ? Employment::findOrFail($id)
-                : Employment::where('user_id', $user->id)->findOrFail($id);
+            if ($user->isAdmin()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Admins may only update employment verification status.',
+                ], 403);
+            }
+            $employment = Employment::where('user_id', $user->id)->findOrFail($id);
 
             // Handle file upload if provided
             if ($request->hasFile('bank_statement')) {
@@ -140,12 +145,13 @@ class EmploymentController extends Controller
                 $employment->verification_status = 'pending';
             }
 
-            $employment->update([
+            $updateData = [
                 'employment_information' => $request->employment_information,
                 'occupation' => $request->occupation,
                 'educational_details' => $request->educational_details,
                 'income' => $request->income,
-            ]);
+            ];
+            $employment->update($updateData);
             $accountLevelService->recalculate($user);
 
             return response()->json([
@@ -161,6 +167,21 @@ class EmploymentController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function updateVerificationStatus(Request $request, string $id)
+    {
+        $validated = $request->validate([
+            'verification_status' => 'required|in:pending,verified,rejected',
+        ]);
+        $employment = Employment::findOrFail($id);
+        $employment->update($validated);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Employment verification status updated successfully',
+            'data' => $employment,
+        ]);
     }
 
     /**

@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateGuarantorIdDocumentRequest;
 use App\Models\Guarantor;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class GuarantorController extends Controller
@@ -126,9 +127,13 @@ class GuarantorController extends Controller
     {
         try {
             $user = auth()->user();
-            $guarantor = $user->isAdmin()
-                ? Guarantor::findOrFail($id)
-                : Guarantor::where('user_id', $user->id)->findOrFail($id);
+            if ($user->isAdmin()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Admins may only update guarantor verification status.',
+                ], 403);
+            }
+            $guarantor = Guarantor::where('user_id', $user->id)->findOrFail($id);
 
             // Check if trying to change type to one that already exists
             if ($request->guarantor_type !== $guarantor->guarantor_type) {
@@ -179,6 +184,21 @@ class GuarantorController extends Controller
         }
     }
 
+    public function updateVerificationStatus(Request $request, string $id)
+    {
+        $validated = $request->validate([
+            'verification_status' => 'required|in:pending,verified,rejected',
+        ]);
+        $guarantor = Guarantor::findOrFail($id);
+        $guarantor->update($validated);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Guarantor verification status updated successfully',
+            'data' => $guarantor,
+        ]);
+    }
+
     /**
      * @requestMediaType multipart/form-data
      */
@@ -188,9 +208,13 @@ class GuarantorController extends Controller
     {
         try {
             $user      = auth()->user();
-            $guarantor = $user->isAdmin()
-                ? Guarantor::findOrFail($id)
-                : Guarantor::where('user_id', $user->id)->findOrFail($id);
+            if ($user->isAdmin()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Admins may only update guarantor verification status.',
+                ], 403);
+            }
+            $guarantor = Guarantor::where('user_id', $user->id)->findOrFail($id);
 
             if ($guarantor->id_file_path && Storage::disk('public')->exists($guarantor->id_file_path)) {
                 Storage::disk('public')->delete($guarantor->id_file_path);

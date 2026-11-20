@@ -6,6 +6,7 @@ use App\Http\Requests\StoreAddressRequest;
 use App\Models\Address;
 use App\Services\AccountLevelService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class AddressController extends Controller
@@ -123,9 +124,13 @@ class AddressController extends Controller
     {
         try {
             $user = auth()->user();
-            $address = $user->isAdmin()
-                ? Address::findOrFail($id)
-                : Address::where('user_id', $user->id)->findOrFail($id);
+            if ($user->isAdmin()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Admins may only update address verification status.',
+                ], 403);
+            }
+            $address = Address::where('user_id', $user->id)->findOrFail($id);
 
             // Handle file upload if provided
             if ($request->hasFile('utility_bill')) {
@@ -161,6 +166,21 @@ class AddressController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function updateVerificationStatus(Request $request, string $id)
+    {
+        $validated = $request->validate([
+            'verification_status' => 'required|in:pending,verified,rejected',
+        ]);
+        $address = Address::findOrFail($id);
+        $address->update($validated);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Address verification status updated successfully',
+            'data' => $address,
+        ]);
     }
 
     /**
