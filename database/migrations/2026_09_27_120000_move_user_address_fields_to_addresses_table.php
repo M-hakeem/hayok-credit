@@ -69,9 +69,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->text('residential_address')->nullable();
-            $table->string('state')->nullable();
-            $table->string('lga')->nullable();
+            $table->text('residential_address')->nullable()->after('phone_number');
+            $table->string('state')->nullable()->after('residential_address');
+            $table->string('lga')->nullable()->after('state');
         });
 
         if (! Schema::hasTable('addresses')) {

@@ -9,13 +9,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('loan_disbursements', function (Blueprint $table) {
-            $table->string('paystack_recipient_code')->nullable();
-            $table->string('provider')->nullable();
-            $table->string('provider_reference')->nullable()->unique();
-            $table->string('transfer_code')->nullable();
-            $table->string('failure_reason')->nullable();
-            $table->json('gateway_response')->nullable();
-            $table->json('metadata')->nullable();
+            $table->string('paystack_recipient_code')->nullable()->after('disbursed_at');
+            $table->string('provider')->nullable()->after('paystack_recipient_code');
+            $table->string('provider_reference')->nullable()->unique()->after('provider');
+            $table->string('transfer_code')->nullable()->after('provider_reference');
+            $table->string('failure_reason')->nullable()->after('transfer_code');
+            $table->json('gateway_response')->nullable()->after('failure_reason');
+            $table->json('metadata')->nullable()->after('gateway_response');
         });
     }
 

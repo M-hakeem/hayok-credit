@@ -15,11 +15,11 @@ return new class extends Migration
         });
 
         Schema::table('phone_verifications', function (Blueprint $table) {
-            $table->string('delivery_channel')->default('sms');
-            $table->string('delivery_status')->default('pending');
-            $table->unsignedTinyInteger('attempt_count')->default(0);
-            $table->string('message_id')->nullable()->index();
-            $table->string('purpose')->default('registration');
+            $table->string('delivery_channel')->default('sms')->after('expires_at');
+            $table->string('delivery_status')->default('pending')->after('delivery_channel');
+            $table->unsignedTinyInteger('attempt_count')->default(0)->after('delivery_status');
+            $table->string('message_id')->nullable()->index()->after('attempt_count');
+            $table->string('purpose')->default('registration')->after('message_id');
         });
 
         DB::table('phone_verifications')->update([
@@ -36,7 +36,7 @@ return new class extends Migration
             $table->dropIndex(['message_id']);
             $table->dropColumn(['delivery_channel', 'delivery_status', 'attempt_count', 'message_id', 'purpose']);
             $table->renameColumn('otp_hash', 'otp');
-            $table->string('pin_id')->nullable();
+            $table->string('pin_id')->nullable()->after('phone_number');
         });
     }
 };

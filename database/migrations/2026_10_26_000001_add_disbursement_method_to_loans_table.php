@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('loans', function (Blueprint $table) {
-            $table->string('disbursement_method')->default('wallet');
-            $table->text('payout_account')->nullable();
+            $table->string('disbursement_method')->default('wallet')->after('rejected_at');
+            $table->text('payout_account')->nullable()->after('disbursement_method');
         });
     }
 

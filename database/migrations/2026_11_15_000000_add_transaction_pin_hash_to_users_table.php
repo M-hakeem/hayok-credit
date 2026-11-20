@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('transaction_pin_hash')->nullable();
+            $table->string('transaction_pin_hash')->nullable()->after('nin_gender');
         });
     }
 

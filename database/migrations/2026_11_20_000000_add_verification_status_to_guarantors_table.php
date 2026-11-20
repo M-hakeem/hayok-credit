@@ -10,7 +10,8 @@ return new class extends Migration
     {
         Schema::table('guarantors', function (Blueprint $table) {
             $table->enum('verification_status', ['pending', 'verified', 'rejected'])
-                ->default('pending');
+                ->default('pending')
+                ->after('id_file_path');
         });
     }
 

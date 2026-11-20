@@ -9,11 +9,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->text('nin_first_name')->nullable();
-            $table->text('nin_middle_name')->nullable();
-            $table->text('nin_last_name')->nullable();
-            $table->text('nin_date_of_birth')->nullable();
-            $table->text('nin_gender')->nullable();
+            $table->text('nin_first_name')->nullable()->after('nin');
+            $table->text('nin_middle_name')->nullable()->after('nin_first_name');
+            $table->text('nin_last_name')->nullable()->after('nin_middle_name');
+            $table->text('nin_date_of_birth')->nullable()->after('nin_last_name');
+            $table->text('nin_gender')->nullable()->after('nin_date_of_birth');
         });
     }
 
