@@ -96,6 +96,9 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::get('first-loan-limit', [FirstLoanLimitController::class, 'show']);
     Route::put('first-loan-limit', [FirstLoanLimitController::class, 'update']);
     Route::get('users/{id}/wallet', [UserController::class, 'wallet']);
+    Route::put('addresses/{id}/verification-status', [AddressController::class, 'updateVerificationStatus']);
+    Route::put('employments/{id}/verification-status', [EmploymentController::class, 'updateVerificationStatus']);
+    Route::put('guarantors/{id}/verification-status', [GuarantorController::class, 'updateVerificationStatus']);
     Route::get('business-loan-applications', [BusinessLoanApplicationController::class, 'index']);
     Route::get('business-loan-applications/{businessLoanApplication}', [BusinessLoanApplicationController::class, 'show']);
     Route::get('business-loan-applications/{businessLoanApplication}/documents/{document}', [BusinessLoanApplicationController::class, 'document']);
