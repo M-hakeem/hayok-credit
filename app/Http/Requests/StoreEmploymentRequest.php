@@ -22,9 +22,9 @@ class StoreEmploymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'employment_information' => 'required|string|min:5|max:1000',
+            'employment_information' => 'required|string|min:3|max:1000',
             'occupation' => 'required|string|min:3|max:100',
-            'educational_details' => 'required|string|min:5|max:1000',
+            'educational_details' => 'required|string|min:3|max:1000',
             'income' => 'required|numeric|min:0|max:999999.99',
             'bank_statement' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ];
@@ -37,11 +37,11 @@ class StoreEmploymentRequest extends FormRequest
     {
         return [
             'employment_information.required' => 'Employment information is required',
-            'employment_information.min' => 'Employment information must be at least 20 characters',
+            'employment_information.min' => 'Employment information must be at least 3 characters',
             'occupation.required' => 'Occupation is required',
             'occupation.min' => 'Occupation must be at least 3 characters',
             'educational_details.required' => 'Educational details are required',
-            'educational_details.min' => 'Educational details must be at least 20 characters',
+            'educational_details.min' => 'Educational details must be at least 3 characters',
             'income.required' => 'Income information is required',
             'income.numeric' => 'Income must be a valid number',
             'income.min' => 'Income cannot be negative',
