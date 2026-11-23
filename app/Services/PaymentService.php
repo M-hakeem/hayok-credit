@@ -57,7 +57,13 @@ class PaymentService
             }
 
             if ($amountPaidCents > $firstBalanceCents) {
-                throw new \RuntimeException('A full-loan payoff must equal the remaining loan balance of NGN '.number_format($remainingLoanBalanceCents / 100, 2, '.', '').'.');
+                throw new \RuntimeException(
+                    'Please clear the outstanding installment balance of NGN '
+                    .number_format($firstBalanceCents / 100, 2, '.', '')
+                    .' first, or pay the full remaining loan balance of NGN '
+                    .number_format($remainingLoanBalanceCents / 100, 2, '.', '')
+                    .' at once.'
+                );
             }
 
             $wallet = $user->wallet;
