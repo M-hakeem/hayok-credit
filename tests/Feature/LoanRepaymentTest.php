@@ -79,6 +79,66 @@ class LoanRepaymentTest extends TestCase
         $this->assertSame(6, $loan->repaymentSchedules()->where('status', 'paid')->count());
     }
 
+    public function test_user_with_partial_installment_must_clear_it_before_paying_more_or_pay_off_loan()
+    {
+        $user = User::create([
+            'fullname' => 'Partial Installment User',
+            'email' => 'partial-installment@example.com',
+            'phone_number' => '08087654323',
+            'password' => 'secret1234',
+            'role' => 'user',
+        ]);
+        $user->wallet()->create([
+            'balance' => 5000,
+            'currency' => 'NGN',
+        ]);
+        $user->setTransactionPin('1234');
+
+        $loan = Loan::create([
+            'user_id' => $user->id,
+            'amount_requested' => 4000,
+            'interest_rate' => 12.5,
+            'total_interest' => 500,
+            'total_repayable' => 4500,
+            'monthly_installment' => 1500,
+            'term_months' => 3,
+            'status' => 'active',
+            'application_reason' => 'Partial installment test',
+        ]);
+
+        for ($number = 1; $number <= 3; $number++) {
+            RepaymentSchedule::create([
+                'loan_id' => $loan->id,
+                'installment_number' => $number,
+                'due_date' => now()->addMonths($number)->toDateString(),
+                'principal_amount' => 4000 / 3,
+                'interest_amount' => 500 / 3,
+                'penalty_amount' => 0,
+                'total_due' => 1500,
+                'amount_paid' => 0,
+                'balance_due' => 1500,
+                'status' => 'pending',
+            ]);
+        }
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/user/loans/{$loan->id}/payments", [
+                'amount_paid' => 1000,
+                'pin' => '1234',
+            ])
+            ->assertOk();
+
+        $this->postJson("/api/user/loans/{$loan->id}/payments", [
+            'amount_paid' => 2000,
+            'pin' => '1234',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath(
+                'message',
+                'Please clear the outstanding installment balance of NGN 500.00 first, or pay the full remaining loan balance of NGN 3500.00 at once.'
+            );
+    }
+
     public function test_user_can_repay_installment_using_wallet_and_loan_closes()
     {
         $user = User::create([
